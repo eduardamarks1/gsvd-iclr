@@ -198,7 +198,6 @@ section:first-of-type { border-top: none; }
   border-radius: 99px; padding: 0.2rem 0.65rem; margin-bottom: 1.1rem;
 }
 .authors { font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 1.4rem; }
-.authors .me { color: var(--text-primary); font-weight: 650; }
 .affil { font-size: 0.82rem; color: var(--text-muted); }
 
 .links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -210,6 +209,14 @@ section:first-of-type { border-top: none; }
   background: var(--surface-1);
 }
 .link-btn:hover { background: var(--surface-2); }
+.link-btn.contact-chip {
+  flex-direction: column; align-items: flex-start; gap: 0.1rem;
+  line-height: 1.35; padding: 0.5rem 0.8rem;
+}
+.contact-mail {
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);
+}
+
 .link-btn.primary {
   background: var(--text-primary); color: var(--surface-0);
   border-color: var(--text-primary);
@@ -240,6 +247,15 @@ section:first-of-type { border-top: none; }
 .figure-caption {
   font-size: 0.82rem; color: var(--text-muted); margin-top: 0.7rem;
   max-width: 40rem;
+}
+
+.posterior-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1rem; margin-top: 2.5rem;
+}
+.posterior-grid img {
+  width: 100%; border-radius: 10px; border: 1px solid var(--border);
+  background: #fff;
 }
 
 /* ---------- collapsible math ---------- */

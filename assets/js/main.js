@@ -18,7 +18,7 @@ const PUBLISHED = [
 ];
 
 let lang = detectLang();
-const state = { slug: null, meta: null, op: null, testSprite: null, hSprite: null };
+const state = { slug: null, meta: null, op: null, testSprite: null };
 
 /* ======================= chrome: theme, language, nav ================== */
 
@@ -98,10 +98,81 @@ function initCospan() {
   cospan.setLabels(t("idea.costA", lang), t("idea.costB", lang));
 }
 
-/* ====================== H frame slider (per pair) ===================== */
+/* ====================== machine: the shared frame ===================== */
+
+/* The machine section browses the shared frame with its own pair, so a reader
+   can compare frames here without scrolling to the playground and without
+   disturbing whatever pair it is showing. It needs only the metadata and the
+   H sprite — never the ~1 MB .bin operator, which exists to score drawings. */
+const hState = { slug: null, meta: null, sprite: null };
+
+/** Option text shared by both pair selectors. */
+const pairLabel = (nameA, nameB, slug) =>
+  `${className(nameA, lang)} vs ${className(nameB, lang)}`
+  + (slug.startsWith("fashion") ? "  ·  Fashion-MNIST" : "  ·  MNIST");
+
+/** Fill a <select> from index.json, remembering the raw names for relabelling
+    when the language changes. */
+function fillPairSelect(select, index) {
+  index.forEach((row) => {
+    const o = document.createElement("option");
+    o.value = row.slug;
+    o.textContent = pairLabel(row.name_A, row.name_B, row.slug);
+    o.dataset.nameA = row.name_A;
+    o.dataset.nameB = row.name_B;
+    select.appendChild(o);
+  });
+}
+
+function relabelPairSelect(selector) {
+  document.querySelectorAll(`${selector} option`).forEach((o) => {
+    if (!o.dataset.nameA) return;
+    o.textContent = pairLabel(o.dataset.nameA, o.dataset.nameB, o.value);
+  });
+}
+
+async function selectHPair(slug) {
+  const status = document.getElementById("h-status");
+  status.textContent = t("machine.loading", lang);
+  status.hidden = false;
+  try {
+    const meta = await loadMeta(slug);            // cached across both sections
+    const sprite = await loadImage(spriteURL(slug, "H"));
+    Object.assign(hState, { slug, meta, sprite });
+    status.hidden = true;
+    renderMachine();
+  } catch (err) {
+    console.error(err);
+    status.innerHTML = t("play.error", lang);
+    status.hidden = false;
+  }
+}
+
+/** Everything in the machine section that depends on its own pair or on the
+    current language: the block figure, the endpoint captions, the slider. */
+function renderMachine() {
+  const { meta } = hState;
+  if (!meta) return;
+  drawBlocks(document.getElementById("blocks-fig"), meta.blocks, {
+    a: t("machine.blockA", lang),
+    shared: t("machine.blockShared", lang),
+    b: t("machine.blockB", lang),
+  });
+  document.querySelectorAll("[data-h-slot='nameA']").forEach((n) => { n.textContent = className(meta.name_A, lang); });
+  document.querySelectorAll("[data-h-slot='nameB']").forEach((n) => { n.textContent = className(meta.name_B, lang); });
+  renderHSlider();
+}
+
+async function initMachine() {
+  const select = document.getElementById("h-pair-select");
+  fillPairSelect(select, await loadIndex());
+  select.value = "mnist_4_9";                     // the pair the prose describes
+  select.addEventListener("change", () => selectHPair(select.value));
+  await selectHPair(select.value);
+}
 
 function renderHSlider() {
-  const { meta, hSprite } = state;
+  const { meta, sprite: hSprite } = hState;
   const canvas = document.getElementById("h-canvas");
   const slider = document.getElementById("h-slider");
   const idxOut = document.getElementById("h-index");
@@ -125,9 +196,9 @@ function renderHSlider() {
     angOut.style.color = angleColor(deg);
   };
   slider.oninput = paint;
-  if (slider.dataset.pair !== state.slug) {
+  if (slider.dataset.pair !== hState.slug) {
     slider.value = Math.floor(n / 2);      // open on the shared middle
-    slider.dataset.pair = state.slug;
+    slider.dataset.pair = hState.slug;
   }
   paint();
 }
@@ -351,25 +422,16 @@ async function selectPair(slug) {
   status.hidden = false;
   try {
     const meta = await loadMeta(slug);
-    const [op, testSprite, hSprite] = await Promise.all([
+    const [op, testSprite] = await Promise.all([
       loadOperator(slug, meta),
       loadImage(spriteURL(slug, "test")),
-      loadImage(spriteURL(slug, "H")),
     ]);
-    Object.assign(state, { slug, meta, op, testSprite, hSprite });
+    Object.assign(state, { slug, meta, op, testSprite });
     status.hidden = true;
 
     histogram.draw(localisedMeta(meta), null);
-    renderHSlider();
-    drawBlocks(document.getElementById("blocks-fig"), meta.blocks, {
-      a: t("machine.blockA", lang),
-      shared: t("machine.blockShared", lang),
-      b: t("machine.blockB", lang),
-    });
     document.getElementById("legend-a").textContent = className(meta.name_A, lang);
     document.getElementById("legend-b").textContent = className(meta.name_B, lang);
-    document.querySelectorAll("[data-slot='nameA']").forEach((n) => { n.textContent = className(meta.name_A, lang); });
-    document.querySelectorAll("[data-slot='nameB']").forEach((n) => { n.textContent = className(meta.name_B, lang); });
     clearPad(); padDirty = false;
     scoreDrawing();
     document.getElementById("bin-title").textContent = t("play.binHint", lang);
@@ -385,16 +447,7 @@ async function selectPair(slug) {
 
 async function initPlayground() {
   const select = document.getElementById("pair-select");
-  const index = await loadIndex();
-  index.forEach((row) => {
-    const o = document.createElement("option");
-    o.value = row.slug;
-    o.textContent = `${className(row.name_A, lang)} vs ${className(row.name_B, lang)}`
-      + (row.family === "fashion" ? "  ·  Fashion-MNIST" : "  ·  MNIST");
-    o.dataset.nameA = row.name_A;
-    o.dataset.nameB = row.name_B;
-    select.appendChild(o);
-  });
+  fillPairSelect(select, await loadIndex());
   select.value = "mnist_4_9";
   select.addEventListener("change", () => selectPair(select.value));
 
@@ -446,27 +499,17 @@ function redrawAll() {
   initHero();
   initCospan();
   renderResults();
-  document.querySelectorAll("#pair-select option").forEach((o) => {
-    if (!o.dataset.nameA) return;
-    const fam = o.value.startsWith("fashion") ? "  ·  Fashion-MNIST" : "  ·  MNIST";
-    o.textContent = `${className(o.dataset.nameA, lang)} vs ${className(o.dataset.nameB, lang)}${fam}`;
-  });
+  relabelPairSelect("#pair-select");
+  relabelPairSelect("#h-pair-select");
+  renderMachine();
   if (state.meta) {
     histogram = createHistogram(document.getElementById("hist"), {
       onBin: showBin,
       labels: { theta: t("play.axisTheta", lang), count: t("play.axisCount", lang) },
     });
     histogram.draw(localisedMeta(state.meta), null);
-    renderHSlider();
-    drawBlocks(document.getElementById("blocks-fig"), state.meta.blocks, {
-      a: t("machine.blockA", lang),
-      shared: t("machine.blockShared", lang),
-      b: t("machine.blockB", lang),
-    });
     document.getElementById("legend-a").textContent = className(state.meta.name_A, lang);
     document.getElementById("legend-b").textContent = className(state.meta.name_B, lang);
-    document.querySelectorAll("[data-slot='nameA']").forEach((n) => { n.textContent = className(state.meta.name_A, lang); });
-    document.querySelectorAll("[data-slot='nameB']").forEach((n) => { n.textContent = className(state.meta.name_B, lang); });
     scoreDrawing();
   }
 }
@@ -481,4 +524,5 @@ initCospan();
 initPad();
 renderResults();
 initCite();
+initMachine();
 initPlayground();

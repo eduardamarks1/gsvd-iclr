@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>An Alignment Angle Is All You Need — GSVD for dataset comparison</title>
+<title>An Alignment Angle Is All You Need: GSVD for dataset comparison</title>
 <meta name="description" content="Comparing two datasets through their geometry: the GSVD gives a joint frame, and a single angle θ(z) says whether a sample is better explained by one dataset, the other, or both.">
 <meta property="og:title" content="An Alignment Angle Is All You Need">
 <meta property="og:description" content="GSVD for geometry-grounded dataset comparison. ICLR 2026.">
@@ -46,7 +46,7 @@
       <h1 data-i18n="hero.title">Two datasets.<br>One <em>angle</em>.</h1>
       <p class="hero-sub" data-i18n="hero.sub"></p>
       <p class="authors">
-        <span class="me">Eduarda de Souza Marques</span>,
+        Eduarda de Souza Marques,
         Arthur Sobrinho Ferreira da Rocha,
         João Paixão,
         Heudson Mirandola,
@@ -91,10 +91,10 @@
           </thead>
           <tbody id="compare-body">
             <tr><td data-i18n="problem.f1"></td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr>
-            <tr><td data-i18n="problem.f2"></td><td style="text-align:center;color:var(--text-muted)">—</td><td style="text-align:center">✓</td></tr>
-            <tr><td data-i18n="problem.f3"></td><td style="text-align:center;color:var(--text-muted)">—</td><td style="text-align:center">✓</td></tr>
-            <tr><td data-i18n="problem.f4"></td><td style="text-align:center;color:var(--text-muted)">—</td><td style="text-align:center">✓</td></tr>
-            <tr><td data-i18n="problem.f5"></td><td style="text-align:center">✓</td><td style="text-align:center;color:var(--text-muted)">—</td></tr>
+            <tr><td data-i18n="problem.f2"></td><td style="text-align:center;color:var(--text-muted)">✕</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f3"></td><td style="text-align:center;color:var(--text-muted)">✕</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f4"></td><td style="text-align:center;color:var(--text-muted)">✕</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f5"></td><td style="text-align:center">✓</td><td style="text-align:center;color:var(--text-muted)">✕</td></tr>
           </tbody>
         </table>
       </div>
@@ -152,10 +152,19 @@
     </div>
 
     <div class="card card-pad-lg" style="margin-top:2rem">
+      <!-- This selector is the machine section's own; it never touches the
+           playground pair further down the page. -->
+      <div class="controls" style="margin-bottom:1.2rem">
+        <div class="control">
+          <label for="h-pair-select" data-i18n="machine.pairLabel">Dataset pair</label>
+          <select id="h-pair-select"></select>
+        </div>
+      </div>
+      <p class="loading" id="h-status" hidden></p>
       <div class="two-col wide-right" style="gap:2rem">
         <div style="display:flex;flex-direction:column;align-items:center;gap:.6rem">
           <canvas id="h-canvas" class="h-view" width="28" height="28"></canvas>
-          <div style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700" id="h-angle">θ = —</div>
+          <div style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700" id="h-angle">θ = …</div>
           <div class="note" id="h-index" style="text-align:center"></div>
         </div>
         <div>
@@ -164,9 +173,9 @@
           <input type="range" id="h-slider" min="0" max="100" value="50" step="1"
                  aria-label="GSVD direction index" style="margin:1rem 0 .4rem">
           <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.75rem;color:var(--text-muted)">
-            <span>0° · <span data-slot="nameA"></span></span>
+            <span>0° · <span data-h-slot="nameA"></span></span>
             <span>45°</span>
-            <span><span data-slot="nameB"></span> · 90°</span>
+            <span><span data-h-slot="nameB"></span> · 90°</span>
           </div>
           <p class="note" style="margin-top:1.2rem" data-i18n="machine.extremesNote"></p>
         </div>
@@ -271,7 +280,7 @@
   <div class="wrap">
     <p class="eyebrow" data-i18n="geom.eyebrow">Why 45° matters</p>
     <h2 data-i18n="geom.title"></h2>
-    <div class="two-col" style="margin-top:1.5rem">
+    <div class="two-col" style="margin-top:1.5rem;align-items:start">
       <div>
         <p data-i18n="geom.p1"></p>
         <div class="eq">P(A | θ) = cos²θ &nbsp;&nbsp;&nbsp; P(B | θ) = sin²θ</div>
@@ -284,16 +293,15 @@
           <div class="math-body" data-i18n="geom.mathBody"></div>
         </details>
       </div>
-      <div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
-          <img src="assets/img/posteriori_distribution_1_5.png" alt="Posterior distribution, digits 1 vs 5" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
-          <img src="assets/img/posteriori_distribution_0_7.png" alt="Posterior distribution, digits 0 vs 7" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
-          <img src="assets/img/posteriori_distribution_3_9.png" alt="Posterior distribution, digits 3 vs 9" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
-          <img src="assets/img/posteriori_distribution_4_9.png" alt="Posterior distribution, digits 4 vs 9" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
-        </div>
-        <p class="figure-caption" data-i18n="geom.figCaption"></p>
-      </div>
     </div>
+
+    <div class="posterior-grid">
+      <img src="assets/img/posteriori_distribution_1_5.png" alt="Posterior distribution, digits 1 vs 5" loading="lazy">
+      <img src="assets/img/posteriori_distribution_0_7.png" alt="Posterior distribution, digits 0 vs 7" loading="lazy">
+      <img src="assets/img/posteriori_distribution_3_9.png" alt="Posterior distribution, digits 3 vs 9" loading="lazy">
+      <img src="assets/img/posteriori_distribution_4_9.png" alt="Posterior distribution, digits 4 vs 9" loading="lazy">
+    </div>
+    <p class="figure-caption" style="margin:1rem auto 0;text-align:center;max-width:46rem" data-i18n="geom.figCaption"></p>
   </div>
 </section>
 
@@ -316,16 +324,24 @@
         <h3 style="margin:0 0 .4rem;font-size:1rem" data-i18n="next.q3Title"></h3>
         <p style="margin:0;font-size:.92rem;color:var(--text-secondary)" data-i18n="next.q3"></p>
       </div>
-      <div class="card" style="border-color:var(--series-b);background:var(--series-b-soft)">
-        <h3 style="margin:0 0 .4rem;font-size:1rem" data-i18n="next.q4Title"></h3>
-        <p style="margin:0;font-size:.92rem;color:var(--text-secondary)" data-i18n="next.q4"></p>
-      </div>
     </div>
 
     <div class="card card-pad-lg narrow" style="margin-top:2.5rem">
       <h3 style="margin-top:0;font-size:1rem" data-i18n="next.personalTitle"></h3>
       <p style="margin-bottom:1rem" data-i18n="next.personal"></p>
       <a class="link-btn" href="mailto:eduardasm@ic.ufrj.br" data-i18n="next.contact">Email me</a>
+    </div>
+
+    <div class="card card-pad-lg narrow" style="margin-top:1rem">
+      <h3 style="margin-top:0;font-size:1rem" data-i18n="next.contactsTitle">Contact</h3>
+      <div class="legend" style="flex-wrap:wrap;gap:.4rem .9rem">
+        <a class="link-btn contact-chip" href="mailto:eduardasm@ic.ufrj.br"><span data-i18n="next.author1"></span><span class="contact-mail">eduardasm@ic.ufrj.br</span></a>
+        <a class="link-btn contact-chip" href="mailto:arthursfr@ic.ufrj.br"><span data-i18n="next.author2"></span><span class="contact-mail">arthursfr@ic.ufrj.br</span></a>
+        <a class="link-btn contact-chip" href="mailto:jpaixao@ic.ufrj.br"><span data-i18n="next.author3"></span><span class="contact-mail">jpaixao@ic.ufrj.br</span></a>
+        <a class="link-btn contact-chip" href="mailto:mirandola@im.ufrj.br"><span data-i18n="next.author4"></span><span class="contact-mail">mirandola@im.ufrj.br</span></a>
+        <a class="link-btn contact-chip" href="mailto:sadoc@ic.ufrj.br"><span data-i18n="next.author5"></span><span class="contact-mail">sadoc@ic.ufrj.br</span></a>
+      </div>
+      <p class="note" style="margin-top:1rem" data-i18n="next.contactsNote"></p>
     </div>
   </div>
 </section>
@@ -337,11 +353,11 @@
     <h2 data-i18n="code.title"></h2>
     <div class="two-col" style="margin-top:1.5rem">
       <div>
-        <h3 style="margin-top:0;font-size:1rem" data-i18n="code.libTitle">gsvdlib — Python</h3>
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="code.libTitle">gsvdlib (Python)</h3>
         <p data-i18n="code.libP"></p>
         <a class="link-btn" href="https://github.com/eduardamarks1/gsvdlib">github.com/…/gsvdlib</a>
 
-        <h3 style="font-size:1rem" data-i18n="code.jlTitle">gsvd-alignment-angle — Julia</h3>
+        <h3 style="font-size:1rem" data-i18n="code.jlTitle">gsvd-alignment-angle (Julia)</h3>
         <p data-i18n="code.jlP"></p>
         <a class="link-btn" href="https://github.com/eduardamarks1/gsvd-alignment-angle">github.com/…/gsvd-alignment-angle</a>
       </div>

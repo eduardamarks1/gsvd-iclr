@@ -334,74 +334,130 @@ export function createCospan(host, labels) {
 export function drawBlocks(host, blocks, labels) {
   clear(host);
   const { bl, r, br } = blocks;
-  const total = bl + r + br;
-  const W = 560, H = 178, pad = 34, barH = 34;
+  const sizes = [bl, r, br];
+
+  /* Cells are deliberately EQUAL sized rather than proportional to the block
+     sizes: br is often ~5% of the total, and a 5%-wide cell can hold neither
+     its symbol nor its number. The real sizes are stated as text instead. */
+  const CELL = 44, GRID = CELL * 3;
+  const LAB = 36;            // room for "C ="
+  const BRK = 9;             // bracket arm length
+  const MAT = LAB + BRK + 4 + GRID + 4 + BRK;   // one whole matrix
+  const GAP = 24, PAD = 8;   // PAD keeps "C =" and the 0 deg tick off the edge
+  const W = PAD * 2 + MAT * 2 + GAP, TOP = 30, H = TOP + GRID + 70;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, host);
-  const inner = W - pad - 10;
 
-  // the shared block is where the angle sweeps, so paint it as that sweep
+  // the shared block is where theta sweeps, so paint it as that sweep
   const defs = el("defs", {}, svg);
-  const grad = el("linearGradient", { id: "blockgrad", x1: "0", x2: "1" }, defs);
-  for (let i = 0; i <= 10; i++) {
-    el("stop", { offset: `${i * 10}%`, "stop-color": angleColor(i * 9) }, grad);
-  }
+  const ramp = (id) => {
+    const g = el("linearGradient", { id, x1: "0", x2: "1" }, defs);
+    for (let i = 0; i <= 10; i++) {
+      el("stop", { offset: `${i * 10}%`, "stop-color": angleColor(i * 9) }, g);
+    }
+    return `url(#${id})`;
+  };
+  const cellRamp = ramp("blockgrad");
+  const barRamp = ramp("blockgrad-bar");
 
-  const seg = [
-    { n: bl, fill: css("--series-a"), label: labels.a },
-    { n: r, fill: "url(#blockgrad)", label: labels.shared },
-    { n: br, fill: css("--series-b"), label: labels.b },
-  ];
-  const rows = [{ y: 20, name: "C" }, { y: 74, name: "S" }];
+  const muted = css("--text-muted");
+  const border = css("--border-strong");
+  const fills = [css("--series-a"), cellRamp, css("--series-b")];
+  // diagonal symbol per matrix: index 0 = C, 1 = S
+  const diag = [["I", "C̃", "0"], ["0", "S̃", "I"]];
+  const subs = ["r", "", "t"];
 
-  rows.forEach((row, ri) => {
+  [0, 1].forEach((mi) => {
+    const ox = PAD + mi * (MAT + GAP);
+    const gx = ox + LAB + BRK + 4, gy = TOP;
+
     el("text", {
-      x: 6, y: row.y + barH / 2 + 5, "font-size": 15, "font-weight": 700,
-      fill: css("--text-primary"), "font-family": "var(--font-mono)",
-    }, svg).textContent = row.name;
+      x: ox + LAB - 6, y: gy + GRID / 2 + 6, "text-anchor": "end",
+      "font-size": 16, "font-weight": 700, fill: css("--text-primary"),
+      "font-family": "var(--font-serif)",
+    }, svg).textContent = mi === 0 ? "C =" : "S =";
 
-    let x = pad;
-    seg.forEach((sg, si) => {
-      const w = (sg.n / total) * inner;
-      const isFull = ri === 0 ? si === 0 : si === 2;   // C = [I, C~, 0]
-      const isZero = ri === 0 ? si === 2 : si === 0;   // S = [0, S~, I]
-      el("rect", {
-        x: x + 1, y: row.y, width: Math.max(0, w - 2), height: barH, rx: 4,
-        fill: isZero ? "none" : sg.fill,
-        stroke: isZero ? css("--border-strong") : "none",
-        "stroke-width": 1, "stroke-dasharray": isZero ? "3 3" : null,
+    // real brackets, drawn as polylines so they scale with the grid
+    const bx0 = gx - 4, bx1 = gx + GRID + 4;
+    [[bx0, BRK], [bx1, -BRK]].forEach(([x, arm]) => {
+      el("polyline", {
+        points: `${x + arm} ${gy - 4} ${x} ${gy - 4} ${x} ${gy + GRID + 4} ${x + arm} ${gy + GRID + 4}`,
+        fill: "none", stroke: css("--text-primary"), "stroke-width": 1.6,
+        "stroke-linecap": "round", "stroke-linejoin": "round",
       }, svg);
-      if (w > 30) {
-        // a halo keeps the symbol legible over the light middle of the ramp
-        const label = isFull ? "I" : isZero ? "0" : (ri === 0 ? "C̃" : "S̃");
-        el("text", {
-          x: x + w / 2, y: row.y + barH / 2 + 5, "text-anchor": "middle",
-          "font-size": 13, "font-family": "var(--font-mono)", "font-weight": 700,
-          fill: isZero ? css("--text-muted") : "#111",
-          style: isZero ? null
-            : "paint-order:stroke;stroke:rgba(255,255,255,.85);stroke-width:3px",
-        }, svg).textContent = label;
+    });
+
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        const x = gx + col * CELL, y = gy + row * CELL;
+        const onDiag = row === col;
+        const sym = onDiag ? diag[mi][row] : "0";
+        const isZero = sym === "0";
+        el("rect", {
+          x: x + 2, y: y + 2, width: CELL - 4, height: CELL - 4, rx: 5,
+          fill: onDiag && !isZero ? fills[row] : "none",
+          stroke: onDiag && !isZero ? "none" : border,
+          "stroke-width": 1,
+          "stroke-dasharray": onDiag ? null : "3 3",
+          opacity: onDiag || !isZero ? 1 : 0.7,
+        }, svg);
+
+        // On the solid blue/orange cells plain white reads best; only the
+        // gradient cells need a halo, because the ramp passes through a light
+        // neutral in the middle where white would disappear.
+        const onRamp = onDiag && !isZero && row === 1;
+        const onSolid = onDiag && !isZero && row !== 1;
+        const ink = isZero ? muted : onSolid ? "#fff" : "#111";
+        const t = el("text", {
+          x: x + CELL / 2, y: y + CELL / 2 + 6, "text-anchor": "middle",
+          "font-size": 16, "font-family": "var(--font-serif)",
+          "font-weight": onDiag ? 700 : 400,
+          fill: ink,
+          style: onRamp
+            ? "paint-order:stroke;stroke:rgba(255,255,255,.9);stroke-width:3.5px"
+            : null,
+        }, svg);
+        t.textContent = sym;
+        if (onDiag && subs[row]) {
+          el("tspan", {
+            "font-size": 10, dy: 4, fill: ink,
+          }, t).textContent = subs[row];
+        }
       }
-      x += w;
+    }
+
+    // sizes sit above their own column, so each block keeps its number
+    sizes.forEach((n, col) => {
+      el("text", {
+        x: gx + col * CELL + CELL / 2, y: gy - 12, "text-anchor": "middle",
+        "font-size": 10, fill: muted, "font-variant-numeric": "tabular-nums",
+      }, svg).textContent = n;
     });
   });
 
-  // the angle sweep, under the shared block only
-  const sx = pad + (bl / total) * inner, sw = (r / total) * inner;
-  const ly = 124;
-  el("line", { x1: sx + 2, y1: ly, x2: sx + sw - 2, y2: ly, stroke: css("--border-strong"), "stroke-width": 1 }, svg);
-  [[sx + 2, "0°", "start"], [sx + sw - 2, "90°", "end"]].forEach(([x, txt, anchor]) => {
-    el("line", { x1: x, y1: ly - 4, x2: x, y2: ly + 4, stroke: css("--border-strong"), "stroke-width": 1 }, svg);
-    el("text", { x, y: ly + 16, "font-size": 10, "text-anchor": anchor, fill: css("--text-muted") }, svg).textContent = txt;
+  /* One shared caption row: the middle block is the only one that carries an
+     angle, so the ramp is explained once under the pair of matrices. */
+  const cy = TOP + GRID + 22;
+  el("rect", { x: PAD, y: cy, width: 116, height: 9, rx: 4.5, fill: barRamp }, svg);
+  [["0°", PAD, "start"], ["90°", PAD + 116, "end"]].forEach(([txt, x, anchor]) => {
+    el("text", {
+      x, y: cy + 24, "font-size": 10, "text-anchor": anchor, fill: muted,
+      "font-variant-numeric": "tabular-nums",
+    }, svg).textContent = txt;
   });
+  el("text", {
+    x: PAD + 126, y: cy + 9, "font-size": 11, fill: css("--text-secondary"),
+  }, svg).textContent = `${labels.shared}: C̃, S̃ · θ 0° → 90° (${r})`;
 
-  // one legend row, so a narrow block still gets a readable name
-  let lx = pad;
-  const ky = 162;
-  seg.forEach((sg) => {
-    el("rect", { x: lx, y: ky - 9, width: 10, height: 10, rx: 2, fill: sg.fill }, svg);
-    const label = `${sg.label} (${sg.n})`;
-    el("text", { x: lx + 15, y: ky, "font-size": 11, fill: css("--text-secondary") }, svg).textContent = label;
-    lx += 15 + label.length * 6.1 + 18;
+  // the two pure blocks named once, with their sizes
+  const ly = cy + 32;
+  let lx = PAD;
+  [[fills[0], labels.a, bl], [fills[2], labels.b, br]].forEach(([fill, name, n]) => {
+    el("rect", { x: lx, y: ly, width: 10, height: 10, rx: 2, fill }, svg);
+    const txt = `${name} (${n})`;
+    el("text", {
+      x: lx + 15, y: ly + 9, "font-size": 11, fill: css("--text-secondary"),
+    }, svg).textContent = txt;
+    lx += 15 + txt.length * 6.2 + 20;
   });
 }
 
