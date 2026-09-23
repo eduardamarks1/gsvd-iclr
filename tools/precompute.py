@@ -10,7 +10,9 @@ which is exact to ~1e-9 against `gsvdlib.classify.theta_angles` and to ~0.005
 degrees after the float16 quantization of P used for transport.
 
 Per pair we emit:
-  <slug>.bin    float16 P (k x 784), then float32 c, then float32 s
+  <slug>.op.json  {"data": base64 of float16 P (k x 784), then float32 c,
+                  then float32 s}; base64 because corporate proxies often
+                  block raw binary downloads
   <slug>.json   metrics, histograms, per-test-sample angles, sprite layout
   <slug>_test.png     sprite with the test images (row-major, 28x28 cells)
   <slug>_H.png        sprite with the reconstructed H directions
@@ -18,6 +20,7 @@ Per pair we emit:
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 
@@ -106,10 +109,11 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
     m = metrics_from_angles(ang_A, ang_B)
     cka = linear_cka(prep.A, prep.B)
 
-    # --- binary payload ----------------------------------------------------
-    (OUT / f"{slug}.bin").write_bytes(
-        P16.tobytes() + cv.astype(np.float32).tobytes()
-        + sv.astype(np.float32).tobytes())
+    # --- binary payload, base64 in JSON ------------------------------------
+    payload = (P16.tobytes() + cv.astype(np.float32).tobytes()
+               + sv.astype(np.float32).tobytes())
+    (OUT / f"{slug}.op.json").write_text(
+        json.dumps({"data": base64.b64encode(payload).decode("ascii")}))
 
     # --- sprites -----------------------------------------------------------
     take_A = min(MAX_SPRITE, X_A.shape[1])

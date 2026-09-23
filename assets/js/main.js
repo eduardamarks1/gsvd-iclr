@@ -103,7 +103,7 @@ function initCospan() {
 /* The machine section browses the shared frame with its own pair, so a reader
    can compare frames here without scrolling to the playground and without
    disturbing whatever pair it is showing. It needs only the metadata and the
-   H sprite — never the ~1 MB .bin operator, which exists to score drawings. */
+   H sprite — never the ~1 MB .op.json operator, which exists to score drawings. */
 const hState = { slug: null, meta: null, sprite: null };
 
 /** Option text shared by both pair selectors. */

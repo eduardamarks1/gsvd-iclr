@@ -79,9 +79,12 @@ export async function loadOperator(slug, meta) {
   const key = "op:" + slug;
   if (!cache.has(key)) {
     cache.set(key, (async () => {
-      const r = await fetch(`${DATA}${slug}.bin`);
-      if (!r.ok) throw new Error(`${slug}.bin: ${r.status}`);
-      const buf = await r.arrayBuffer();
+      // Base64 inside JSON rather than a raw .bin: corporate proxies often
+      // block application/octet-stream downloads but let JSON through.
+      const r = await fetch(`${DATA}${slug}.op.json`);
+      if (!r.ok) throw new Error(`${slug}.op.json: ${r.status}`);
+      const bytes = Uint8Array.from(atob((await r.json()).data), (ch) => ch.charCodeAt(0));
+      const buf = bytes.buffer;
       const { k, d } = meta;
       const P = decodeHalf(buf, 0, k * d);
       const off = k * d * 2;
