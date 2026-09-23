@@ -1,0 +1,82 @@
+[
+ {
+  "slug": "mnist_1_5",
+  "family": "mnist",
+  "name_A": "Digit 1",
+  "name_B": "Digit 5",
+  "cka": 0.1121,
+  "label_A": 1,
+  "label_B": 5,
+  "accuracy": 0.9439
+ },
+ {
+  "slug": "mnist_0_7",
+  "family": "mnist",
+  "name_A": "Digit 0",
+  "name_B": "Digit 7",
+  "cka": 0.2226,
+  "label_A": 0,
+  "label_B": 7,
+  "accuracy": 0.9597
+ },
+ {
+  "slug": "mnist_4_9",
+  "family": "mnist",
+  "name_A": "Digit 4",
+  "name_B": "Digit 9",
+  "cka": 0.7414,
+  "label_A": 4,
+  "label_B": 9,
+  "accuracy": 0.8951
+ },
+ {
+  "slug": "mnist_3_9",
+  "family": "mnist",
+  "name_A": "Digit 3",
+  "name_B": "Digit 9",
+  "cka": 0.3072,
+  "label_A": 3,
+  "label_B": 9,
+  "accuracy": 0.9519
+ },
+ {
+  "slug": "fashion_0_4",
+  "family": "fashion",
+  "name_A": "T-shirt/top",
+  "name_B": "Coat",
+  "cka": 0.6874,
+  "label_A": 0,
+  "label_B": 4,
+  "accuracy": 0.939
+ },
+ {
+  "slug": "fashion_2_3",
+  "family": "fashion",
+  "name_A": "Pullover",
+  "name_B": "Dress",
+  "cka": 0.7007,
+  "label_A": 2,
+  "label_B": 3,
+  "accuracy": 0.902
+ },
+ {
+  "slug": "fashion_7_9",
+  "family": "fashion",
+  "name_A": "Sneaker",
+  "name_B": "Ankle boot",
+  "cka": 0.3207,
+  "label_A": 7,
+  "label_B": 9,
+  "accuracy": 0.941
+ },
+ {
+  "slug": "fashion_0_7",
+  "family": "fashion",
+  "name_A": "T-shirt/top",
+  "name_B": "Sneaker",
+  "cka": 0.2942,
+  "label_A": 0,
+  "label_B": 7,
+  "accuracy": 0.9825
+ }
+]

@@ -1,0 +1,10 @@
+node_modules/
+package-lock.json
+server.log
+.smoke.mjs
+.diag*.mjs
+.shots.mjs
+.dm.mjs
+.h.mjs
+.idea.mjs
+.check.mjs

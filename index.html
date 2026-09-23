@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An Alignment Angle Is All You Need — GSVD for dataset comparison</title>
+<meta name="description" content="Comparing two datasets through their geometry: the GSVD gives a joint frame, and a single angle θ(z) says whether a sample is better explained by one dataset, the other, or both.">
+<meta property="og:title" content="An Alignment Angle Is All You Need">
+<meta property="og:description" content="GSVD for geometry-grounded dataset comparison. ICLR 2026.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Spectral:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#idea">Skip to content</a>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="#top">θ<span>(z)</span></a>
+    <div class="nav-links">
+      <a href="#problem" data-i18n="nav.idea">The idea</a>
+      <a href="#machine" data-i18n="nav.machine">The machine</a>
+      <a href="#play" data-i18n="nav.play">Playground</a>
+      <a href="#results" data-i18n="nav.results">Results</a>
+      <a href="#geometry" data-i18n="nav.geometry">Why 45° matters</a>
+      <a href="#next" data-i18n="nav.next">What's next</a>
+      <a href="#code" data-i18n="nav.code">Code</a>
+    </div>
+    <div class="nav-tools">
+      <button class="btn-ghost" id="lang-toggle" data-i18n="nav.lang"
+              data-i18n-attr="title:nav.langTitle">PT</button>
+      <button class="btn-ghost" id="theme-toggle" aria-label="Theme"
+              data-i18n-attr="title:nav.theme">☀</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="venue" data-i18n="hero.venue">ICLR 2026 · PMLR v326</span>
+      <h1 data-i18n="hero.title">Two datasets.<br>One <em>angle</em>.</h1>
+      <p class="hero-sub" data-i18n="hero.sub"></p>
+      <p class="authors">
+        <span class="me">Eduarda de Souza Marques</span>,
+        Arthur Sobrinho Ferreira da Rocha,
+        João Paixão,
+        Heudson Mirandola,
+        Daniel Sadoc Menasché<br>
+        <span class="affil" data-i18n="hero.affil"></span>
+      </p>
+      <div class="links">
+        <a class="link-btn primary" href="https://proceedings.mlr.press/v326/marques26a.html"
+           data-i18n="hero.paper">Paper (PMLR)</a>
+        <a class="link-btn" href="https://arxiv.org/abs/2603.10283" data-i18n="hero.arxiv">arXiv</a>
+        <a class="link-btn" href="https://github.com/eduardamarks1/gsvd-alignment-angle" data-i18n="hero.code">Code</a>
+        <a class="link-btn" href="https://github.com/eduardamarks1/gsvdlib" data-i18n="hero.lib">Python library</a>
+      </div>
+    </div>
+    <div>
+      <div id="hero-dial"></div>
+      <p class="figure-caption" data-i18n="hero.dialCaption"></p>
+    </div>
+  </div>
+</header>
+
+<!-- ========================== PROBLEM ============================ -->
+<section id="problem">
+  <div class="wrap two-col wide-left">
+    <div>
+      <p class="eyebrow" data-i18n="problem.eyebrow">The problem</p>
+      <h2 data-i18n="problem.title"></h2>
+      <p data-i18n="problem.p1"></p>
+      <p data-i18n="problem.p2"></p>
+      <p class="note" data-i18n="problem.note"></p>
+    </div>
+    <div class="card card-pad-lg">
+      <h3 style="margin-top:0;font-size:1rem" data-i18n="problem.cardTitle"></h3>
+      <div class="table-scroll">
+        <table class="data">
+          <thead>
+            <tr>
+              <th></th>
+              <th style="text-align:center" data-i18n="problem.rowMetric"></th>
+              <th style="text-align:center" data-i18n="problem.rowOurs"></th>
+            </tr>
+          </thead>
+          <tbody id="compare-body">
+            <tr><td data-i18n="problem.f1"></td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f2"></td><td style="text-align:center;color:var(--text-muted)">—</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f3"></td><td style="text-align:center;color:var(--text-muted)">—</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f4"></td><td style="text-align:center;color:var(--text-muted)">—</td><td style="text-align:center">✓</td></tr>
+            <tr><td data-i18n="problem.f5"></td><td style="text-align:center">✓</td><td style="text-align:center;color:var(--text-muted)">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ IDEA ============================= -->
+<section id="idea">
+  <div class="wrap two-col">
+    <div>
+      <p class="eyebrow" data-i18n="idea.eyebrow">The idea</p>
+      <h2 style="font-family:var(--font-mono);font-size:2rem" data-i18n="idea.title">Ax = By = z</h2>
+      <p data-i18n="idea.p1"></p>
+      <blockquote style="margin:1.4rem 0;padding-left:1.1rem;border-left:3px solid var(--series-b);font-family:var(--font-serif);font-size:1.15rem;color:var(--text-primary);max-width:var(--measure)">
+        <span data-i18n="idea.quote"></span>
+      </blockquote>
+      <p data-i18n="idea.p2"></p>
+      <p data-i18n="idea.p3"></p>
+      <details class="math">
+        <summary data-i18n="idea.mathSummary">See the definition</summary>
+        <div class="math-body" data-i18n="idea.mathBody"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;font-size:1rem" data-i18n="idea.demoTitle"></h3>
+      <p class="note" style="margin-bottom:1rem" data-i18n="idea.demoHint"></p>
+      <div id="cospan-demo"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== MACHINE =========================== -->
+<section id="machine">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="machine.eyebrow">The machine</p>
+    <h2 data-i18n="machine.title"></h2>
+    <div class="two-col" style="margin-top:1.5rem">
+      <div>
+        <p data-i18n="machine.p1"></p>
+        <div class="eq">A = H C U &nbsp;&nbsp;&nbsp; B = H S V &nbsp;&nbsp;&nbsp; CᵀC + SᵀS = I</div>
+        <p data-i18n="machine.p2"></p>
+        <details class="math">
+          <summary data-i18n="machine.mathSummary">See the closed form</summary>
+          <div class="math-body" data-i18n="machine.mathBody"></div>
+        </details>
+      </div>
+      <div>
+        <div class="card">
+          <h3 style="margin-top:0;font-size:1rem" data-i18n="machine.blocksTitle"></h3>
+          <div id="blocks-fig"></div>
+          <p class="figure-caption" data-i18n="machine.blocksCaption"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-pad-lg" style="margin-top:2rem">
+      <div class="two-col wide-right" style="gap:2rem">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:.6rem">
+          <canvas id="h-canvas" class="h-view" width="28" height="28"></canvas>
+          <div style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700" id="h-angle">θ = —</div>
+          <div class="note" id="h-index" style="text-align:center"></div>
+        </div>
+        <div>
+          <h3 style="margin-top:0;font-size:1rem" data-i18n="machine.sliderTitle"></h3>
+          <p class="note" data-i18n="machine.sliderHint"></p>
+          <input type="range" id="h-slider" min="0" max="100" value="50" step="1"
+                 aria-label="GSVD direction index" style="margin:1rem 0 .4rem">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.75rem;color:var(--text-muted)">
+            <span>0° · <span data-slot="nameA"></span></span>
+            <span>45°</span>
+            <span><span data-slot="nameB"></span> · 90°</span>
+          </div>
+          <p class="note" style="margin-top:1.2rem" data-i18n="machine.extremesNote"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= PLAYGROUND ========================== -->
+<section id="play">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="play.eyebrow">Playground</p>
+    <h2 data-i18n="play.title"></h2>
+    <p data-i18n="play.p1"></p>
+
+    <div class="controls" style="margin-top:1.6rem">
+      <div class="control">
+        <label for="pair-select" data-i18n="play.pairLabel">Dataset pair</label>
+        <select id="pair-select"></select>
+      </div>
+      <div class="legend" style="padding-bottom:.5rem">
+        <span class="legend-item"><span class="swatch a"></span><span id="legend-a">A</span></span>
+        <span class="legend-item"><span class="swatch b"></span><span id="legend-b">B</span></span>
+      </div>
+    </div>
+
+    <p class="loading" id="play-status" hidden></p>
+
+    <div class="two-col wide-right" style="gap:2rem;align-items:start">
+      <div class="card">
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="play.drawTitle"></h3>
+        <p class="note" data-i18n="play.drawHint"></p>
+        <canvas id="draw-pad" class="draw-pad" style="margin:.8rem auto"></canvas>
+        <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap">
+          <button class="btn-ghost" id="pad-clear" data-i18n="play.clear">Clear</button>
+          <button class="btn-ghost" id="pad-random" data-i18n="play.random">Random test sample</button>
+        </div>
+        <div id="play-dial" style="margin-top:1rem"></div>
+        <p style="text-align:center;margin:0">
+          <span class="note" data-i18n="play.verdict">Reads as</span>
+          <span id="verdict" style="display:block;font-family:var(--font-serif);font-size:1.4rem;font-weight:600"></span>
+        </p>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 style="margin-top:0;font-size:1rem" data-i18n="play.histTitle"></h3>
+          <p class="note" data-i18n="play.histHint"></p>
+          <div id="hist" style="margin-top:.8rem"></div>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <h3 style="margin-top:0;font-size:1rem" data-i18n="play.binTitle"></h3>
+          <p class="note" id="bin-title" data-i18n="play.binHint"></p>
+          <canvas id="bin-strip" class="thumb-strip" style="margin-top:.6rem" hidden></canvas>
+        </div>
+
+        <p class="note" style="margin-top:1rem" data-i18n="play.overlapNote"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== RESULTS ============================ -->
+<section id="results">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="results.eyebrow">Results</p>
+    <h2 data-i18n="results.title"></h2>
+    <div class="two-col" style="margin-top:1.5rem">
+      <div>
+        <p data-i18n="results.p1"></p>
+        <p data-i18n="results.p2"></p>
+        <h3 style="font-size:1rem" data-i18n="results.tableTitle"></h3>
+        <div class="table-scroll">
+          <table class="data" id="results-table">
+            <thead>
+              <tr>
+                <th data-i18n="results.colPair">Pair</th>
+                <th data-i18n="results.colAcc">Accuracy</th>
+                <th data-i18n="results.colCka">CKA</th>
+                <th data-i18n="results.colF1a">F₁ (A)</th>
+                <th data-i18n="results.colF1b">F₁ (B)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note" style="margin-top:.8rem" data-i18n="results.reproNote"></p>
+        <p class="note" data-i18n="results.fashionNote"></p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="results.scatterTitle"></h3>
+        <div id="scatter" style="margin-top:.6rem"></div>
+        <p class="figure-caption" data-i18n="results.scatterCaption"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= GEOMETRY ============================ -->
+<section id="geometry">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="geom.eyebrow">Why 45° matters</p>
+    <h2 data-i18n="geom.title"></h2>
+    <div class="two-col" style="margin-top:1.5rem">
+      <div>
+        <p data-i18n="geom.p1"></p>
+        <div class="eq">P(A | θ) = cos²θ &nbsp;&nbsp;&nbsp; P(B | θ) = sin²θ</div>
+        <p data-i18n="geom.p2"></p>
+        <p data-i18n="geom.p3"></p>
+        <p style="font-family:var(--font-serif);font-size:1.3rem;color:var(--text-primary);border-left:3px solid var(--neutral-mid);padding-left:1.1rem;margin-top:1.6rem"
+           data-i18n="geom.takeaway"></p>
+        <details class="math">
+          <summary data-i18n="geom.mathSummary">See the derivation</summary>
+          <div class="math-body" data-i18n="geom.mathBody"></div>
+        </details>
+      </div>
+      <div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+          <img src="assets/img/posteriori_distribution_1_5.png" alt="Posterior distribution, digits 1 vs 5" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
+          <img src="assets/img/posteriori_distribution_0_7.png" alt="Posterior distribution, digits 0 vs 7" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
+          <img src="assets/img/posteriori_distribution_3_9.png" alt="Posterior distribution, digits 3 vs 9" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
+          <img src="assets/img/posteriori_distribution_4_9.png" alt="Posterior distribution, digits 4 vs 9" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border);background:#fff">
+        </div>
+        <p class="figure-caption" data-i18n="geom.figCaption"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== NEXT ============================== -->
+<section id="next">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="next.eyebrow">What's next</p>
+    <h2 data-i18n="next.title"></h2>
+    <p class="lede" style="margin-bottom:2rem" data-i18n="next.p1"></p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem">
+      <div class="card">
+        <h3 style="margin:0 0 .4rem;font-size:1rem" data-i18n="next.q1Title"></h3>
+        <p style="margin:0;font-size:.92rem;color:var(--text-secondary)" data-i18n="next.q1"></p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 .4rem;font-size:1rem" data-i18n="next.q2Title"></h3>
+        <p style="margin:0;font-size:.92rem;color:var(--text-secondary)" data-i18n="next.q2"></p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 .4rem;font-size:1rem" data-i18n="next.q3Title"></h3>
+        <p style="margin:0;font-size:.92rem;color:var(--text-secondary)" data-i18n="next.q3"></p>
+      </div>
+      <div class="card" style="border-color:var(--series-b);background:var(--series-b-soft)">
+        <h3 style="margin:0 0 .4rem;font-size:1rem" data-i18n="next.q4Title"></h3>
+        <p style="margin:0;font-size:.92rem;color:var(--text-secondary)" data-i18n="next.q4"></p>
+      </div>
+    </div>
+
+    <div class="card card-pad-lg narrow" style="margin-top:2.5rem">
+      <h3 style="margin-top:0;font-size:1rem" data-i18n="next.personalTitle"></h3>
+      <p style="margin-bottom:1rem" data-i18n="next.personal"></p>
+      <a class="link-btn" href="mailto:eduardasm@ic.ufrj.br" data-i18n="next.contact">Email me</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CODE ============================= -->
+<section id="code">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="code.eyebrow">Code</p>
+    <h2 data-i18n="code.title"></h2>
+    <div class="two-col" style="margin-top:1.5rem">
+      <div>
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="code.libTitle">gsvdlib — Python</h3>
+        <p data-i18n="code.libP"></p>
+        <a class="link-btn" href="https://github.com/eduardamarks1/gsvdlib">github.com/…/gsvdlib</a>
+
+        <h3 style="font-size:1rem" data-i18n="code.jlTitle">gsvd-alignment-angle — Julia</h3>
+        <p data-i18n="code.jlP"></p>
+        <a class="link-btn" href="https://github.com/eduardamarks1/gsvd-alignment-angle">github.com/…/gsvd-alignment-angle</a>
+      </div>
+      <div>
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="code.snippetTitle">Six lines</h3>
+<pre class="bib" style="font-size:.8rem"><code>from gsvdlib import MNISTDataset, prepare_data, evaluate_pair
+
+ds   = MNISTDataset()
+prep = prepare_data(ds, 4, 9, n_A=900, n_B=800)
+angles_A, angles_B, acc = evaluate_pair(ds, 4, 9, prep)
+# -> per-sample θ for every test image, plus the accuracy</code></pre>
+        <p class="note" style="margin-top:1rem" data-i18n="code.wantMore"></p>
+      </div>
+    </div>
+
+    <div class="narrow" style="margin-top:3rem">
+      <div class="copy-row">
+        <h3 style="margin:0;font-size:1rem" data-i18n="cite.title">Citation</h3>
+        <button class="btn-ghost" id="copy-bib" data-i18n="cite.copy">Copy BibTeX</button>
+      </div>
+<pre class="bib"><code id="bibtex">@misc{marques2026gsvdgeometrygroundeddatasetcomparison,
+      title={GSVD for Geometry-Grounded Dataset Comparison: An Alignment Angle Is All You Need},
+      author={Eduarda de Souza Marques and Arthur Sobrinho Ferreira da Rocha and Joao Paixao and Heudson Mirandola and Daniel Sadoc Menasche},
+      year={2026},
+      eprint={2603.10283},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2603.10283},
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <p data-i18n="footer.built"></p>
+      <p data-i18n="footer.thanks"></p>
+    </div>
+    <div>
+      <p>
+        <a href="https://proceedings.mlr.press/v326/marques26a.html">PMLR v326</a> ·
+        <a href="https://arxiv.org/abs/2603.10283">arXiv:2603.10283</a> ·
+        <a href="https://github.com/eduardamarks1/gsvd-site" data-i18n="footer.source">Site source</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
