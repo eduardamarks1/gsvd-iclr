@@ -294,8 +294,12 @@ export function createCospan(host, labels) {
     const a = cost(A, z), b = cost(B, z), th = thetaAt(z);
     slot("ca").textContent = a.toFixed(2);
     slot("cb").textContent = b.toFixed(2);
-    slot("th").textContent = `${th.toFixed(1)}°`;
-    slot("th").style.color = angleColor(th);
+    const th_el = slot("th");
+    th_el.replaceChildren();
+    const chip = document.createElement("span");
+    chip.className = "angle-dot";
+    chip.style.background = angleColor(th);
+    th_el.append(chip, document.createTextNode(`${th.toFixed(1)}°`));
     if (onTheta) onTheta(th);
   }
 

@@ -171,6 +171,15 @@ async function initMachine() {
   await selectHPair(select.value);
 }
 
+/** A colour chip for an angle. The number or label keeps an ink colour so it
+    stays legible, while the hue beside it still carries the reading. */
+function dot(deg) {
+  const d = document.createElement("span");
+  d.className = "angle-dot";
+  d.style.background = angleColor(deg);
+  return d;
+}
+
 function renderHSlider() {
   const { meta, sprite: hSprite } = hState;
   const canvas = document.getElementById("h-canvas");
@@ -192,8 +201,7 @@ function renderHSlider() {
     ctx.drawImage(hSprite, c * cell, r * cell, cell, cell, 0, 0, 28, 28);
     const deg = meta.angles_H[i];
     idxOut.textContent = `${t("machine.dirLabel", lang)} ${i + 1} ${t("machine.of", lang)} ${n}`;
-    angOut.textContent = `θ = ${deg.toFixed(1)}°`;
-    angOut.style.color = angleColor(deg);
+    angOut.replaceChildren(dot(deg), document.createTextNode(`θ = ${deg.toFixed(1)}°`));
   };
   slider.oninput = paint;
   if (slider.dataset.pair !== hState.slug) {
@@ -330,8 +338,8 @@ function scoreDrawing() {
   playDial.setValue(deg, "");
   histogram.setMarker(deg);
   const name = className(deg <= 45 ? state.meta.name_A : state.meta.name_B, lang);
-  verdict.textContent = name;
-  verdict.style.color = angleColor(deg);
+  verdict.style.color = "var(--text-primary)";
+  verdict.replaceChildren(dot(deg), document.createTextNode(name));
 }
 
 function showRandomSample() {

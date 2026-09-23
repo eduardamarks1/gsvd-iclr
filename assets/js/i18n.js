@@ -7,13 +7,12 @@ export const STRINGS = {
     "meta.desc": "Comparing two datasets through their geometry: the GSVD gives a joint frame, and a single angle θ(z) says whether a sample is better explained by one dataset, the other, or both.",
 
     "nav.idea": "The idea",
-    "nav.machine": "The machine",
+    "nav.machine": "GSVD",
     "nav.play": "Playground",
     "nav.results": "Results",
     "nav.geometry": "Why 45° matters",
     "nav.next": "What's next",
     "nav.code": "Code",
-    "nav.lang": "PT",
     "nav.langTitle": "Ver em português",
     "nav.theme": "Theme",
 
@@ -172,13 +171,12 @@ export const STRINGS = {
     "meta.desc": "Comparar dois conjuntos de dados pela geometria: o GSVD fornece um sistema de coordenadas conjunto e um único ângulo θ(z) diz se uma amostra é melhor explicada por um dataset, pelo outro, ou por ambos.",
 
     "nav.idea": "A ideia",
-    "nav.machine": "A máquina",
+    "nav.machine": "GSVD",
     "nav.play": "Interativo",
     "nav.results": "Resultados",
     "nav.geometry": "Por que 45°",
     "nav.next": "Próximos passos",
     "nav.code": "Código",
-    "nav.lang": "EN",
     "nav.langTitle": "View in English",
     "nav.theme": "Tema",
 
@@ -363,6 +361,8 @@ export function detectLang() {
 export function applyLang(lang) {
   const dict = STRINGS[lang] || STRINGS.en;
   document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
+  // the flag on the language toggle is chosen in CSS from this attribute
+  document.documentElement.dataset.lang = lang;
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");
