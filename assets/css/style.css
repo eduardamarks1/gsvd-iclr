@@ -409,6 +409,13 @@ footer { border-top: 1px solid var(--border); padding: 2.5rem 0 3.5rem; backgrou
 footer .wrap { display: flex; flex-wrap: wrap; gap: 2rem; justify-content: space-between; }
 footer p { font-size: 0.85rem; color: var(--text-muted); }
 
+/* The personal note, contacts and citation are full-width cards, so their
+   prose needs to drop the reading-measure cap that <p> carries by default. */
+#next .card.card-pad-lg p, #code > .wrap > div > p { max-width: none; }
+
+.footer-me { color: var(--text-primary); font-weight: 550; }
+.footer-me a { color: inherit; }
+
 pre.bib {
   background: var(--surface-2); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 1rem; overflow-x: auto;
