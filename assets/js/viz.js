@@ -115,7 +115,7 @@ export function createDial(host, { interactive = false, onChange = null } = {}) 
   const readout = el("text", {
     x: cx, y: cy + 46, "text-anchor": "middle", "font-size": 34,
     "font-weight": 600, fill: css("--text-primary"),
-    "font-variant-numeric": "tabular-nums", "font-family": "var(--font-serif)",
+    "font-variant-numeric": "tabular-nums", "font-family": "var(--font-display)",
   }, svg);
   const caption = el("text", {
     x: cx, y: cy + 68, "text-anchor": "middle", "font-size": 11,
@@ -373,7 +373,7 @@ export function drawBlocks(host, blocks, labels) {
     el("text", {
       x: ox + LAB - 6, y: gy + GRID / 2 + 6, "text-anchor": "end",
       "font-size": 16, "font-weight": 700, fill: css("--text-primary"),
-      "font-family": "var(--font-serif)",
+      "font-family": "var(--font-display)",
     }, svg).textContent = mi === 0 ? "C =" : "S =";
 
     // real brackets, drawn as polylines so they scale with the grid
@@ -409,7 +409,7 @@ export function drawBlocks(host, blocks, labels) {
         const ink = isZero ? muted : onSolid ? "#fff" : "#111";
         const t = el("text", {
           x: x + CELL / 2, y: y + CELL / 2 + 6, "text-anchor": "middle",
-          "font-size": 16, "font-family": "var(--font-serif)",
+          "font-size": 16, "font-family": "var(--font-display)",
           "font-weight": onDiag ? 700 : 400,
           fill: ink,
           style: onRamp

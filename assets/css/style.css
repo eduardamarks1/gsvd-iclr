@@ -29,7 +29,8 @@
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
-  --font-serif: "Spectral", Georgia, "Times New Roman", serif;
+  --font-display: "Figtree", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   --measure: 34rem;
@@ -111,7 +112,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4 { font-family: var(--font-serif); font-weight: 600; line-height: 1.2; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; }
 h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); margin: 0 0 0.6rem; letter-spacing: -0.015em; }
 h3 { font-size: 1.22rem; margin: 2.2rem 0 0.5rem; }
 p { margin: 0 0 1.1rem; max-width: var(--measure); }
@@ -253,7 +254,7 @@ section:first-of-type { border-top: none; }
    full width: two real columns instead of one column and dead space. */
 .geom-text > div > p, .geom-text .eq, .geom-text details.math { max-width: none; }
 .geom-takeaway {
-  font-family: var(--font-serif); font-size: 1.3rem; color: var(--text-primary);
+  font-family: var(--font-display); font-size: 1.3rem; color: var(--text-primary);
   border-left: 3px solid var(--neutral-mid); padding-left: 1.1rem;
   margin-top: 1.6rem;
 }
@@ -363,7 +364,7 @@ table.data td.hi { font-weight: 650; }
   border-radius: var(--radius); padding: 0.9rem 1rem;
 }
 .stat .val {
-  font-family: var(--font-serif); font-size: 1.9rem; font-weight: 600;
+  font-family: var(--font-display); font-size: 1.9rem; font-weight: 600;
   line-height: 1.1; font-variant-numeric: tabular-nums;
 }
 .stat .lbl { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
