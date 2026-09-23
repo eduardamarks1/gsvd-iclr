@@ -249,6 +249,15 @@ section:first-of-type { border-top: none; }
   max-width: 40rem;
 }
 
+/* This section's figures sit below the prose, so the text is free to use the
+   full width: two real columns instead of one column and dead space. */
+.geom-text > div > p, .geom-text .eq, .geom-text details.math { max-width: none; }
+.geom-takeaway {
+  font-family: var(--font-serif); font-size: 1.3rem; color: var(--text-primary);
+  border-left: 3px solid var(--neutral-mid); padding-left: 1.1rem;
+  margin-top: 1.6rem;
+}
+
 .posterior-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
   gap: 1rem; margin-top: 2.5rem;
