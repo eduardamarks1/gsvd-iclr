@@ -168,7 +168,7 @@ export const STRINGS = {
 
   pt: {
     "meta.title": "Um ângulo de alinhamento é tudo o que você precisa: GSVD para comparar datasets",
-    "meta.desc": "Comparar dois conjuntos de dados pela geometria: a GSVD fornece um sistema de coordenadas conjunto e um único ângulo θ(z) diz se uma amostra é melhor explicada por um dataset, pelo outro, ou por ambos.",
+    "meta.desc": "Comparar dois conjuntos de dados pela geometria: o GSVD fornece um sistema de coordenadas conjunto e um único ângulo θ(z) diz se uma amostra é melhor explicada por um dataset, pelo outro, ou por ambos.",
 
     "nav.idea": "A ideia",
     "nav.machine": "A máquina",
@@ -225,7 +225,7 @@ export const STRINGS = {
     "idea.mathBody": "<p>Para uma amostra <span class='eq-inline'>z</span> em <span class='eq-inline'>col(A) ∩ col(B)</span>, a fibra co-span é o conjunto de todos os pares de coeficientes compatíveis:</p><div class='eq'>R(z) = { (x, y) : Ax = By = z }</div><p>Tomar o representante de norma mínima de cada lado (isto é, <span class='eq-inline'>x ⊥ Ker(A)</span> e <span class='eq-inline'>y ⊥ Ker(B)</span>) torna os dois custos canônicos, e o ângulo de alinhamento é</p><div class='eq'>θ(z) = arctan( ‖x‖₂ / ‖y‖₂ ) ∈ [0, π/2]</div><p>Custos iguais dão θ = π/4. A arcotangente é o que limita o escore e o torna simétrico ao trocar A e B: a troca leva θ em π/2 − θ.</p>",
 
     "machine.eyebrow": "A máquina",
-    "machine.title": "A GSVD entrega o sistema de coordenadas",
+    "machine.title": "O GSVD entrega o sistema de coordenadas",
     "machine.p1": "Calcular esse ângulo por força bruta para cada amostra seria inviável. A Decomposição em Valores Singulares Generalizada faz o trabalho uma vez, de antemão: ela fatora as duas matrizes contra um referencial compartilhado.",
     "machine.p2": "<span class='eq-inline'>H</span> é o referencial ambiente compartilhado. Os fatores diagonais <span class='eq-inline'>C</span> e <span class='eq-inline'>S</span> dizem o quanto cada direção desse referencial pertence a A ou a B e, como <span class='eq-inline'>CᵀC + SᵀS = I</span>, cada direção carrega um único par cosseno/seno. Esse par é um ângulo, que já está na decomposição em vez de ser aproximado a partir dela.",
     "machine.blocksTitle": "A estrutura de blocos é a história toda",
@@ -241,11 +241,11 @@ export const STRINGS = {
     "machine.loading": "carregando o referencial compartilhado…",
     "machine.extremesNote": "Os extremos não são encontrados por busca. O artigo prova que o maximizador e o minimizador de θ são colunas específicas de H, a saber <span class='eq-inline'>h₍ᵣ₊ₖ₎</span> e <span class='eq-inline'>h₍ᵣ₊₁₎</span>, de modo que a mesma decomposição que pontua amostras também entrega as direções extremas em forma fechada.",
     "machine.mathSummary": "Ver a forma fechada",
-    "machine.mathBody": "<p>A GSVD de um par de matrizes que compartilham a dimensão de linhas dá</p><div class='eq'>A = H C U,&nbsp;&nbsp; B = H S V,&nbsp;&nbsp; CᵀC + SᵀS = I</div><p>com U e V ortogonais. Projetando uma amostra no referencial compartilhado com <span class='eq-inline'>c(z) = H†z</span>, os dois custos de representação são lidos diretamente dos fatores diagonais:</p><div class='eq'>θ(z) = arctan( ‖C† c(z)‖₂ / ‖S† c(z)‖₂ )</div><p>Esse é o primeiro teorema do artigo: a expressão no referencial da GSVD coincide com a definição por norma mínima. Computacionalmente, a decomposição custa O(d³) uma vez, e cada amostra depois custa um produto matriz–vetor, que é o motivo de o demo abaixo conseguir pontuar seu desenho em tempo real.</p>",
+    "machine.mathBody": "<p>O GSVD de um par de matrizes que compartilham a dimensão de linhas dá</p><div class='eq'>A = H C U,&nbsp;&nbsp; B = H S V,&nbsp;&nbsp; CᵀC + SᵀS = I</div><p>com U e V ortogonais. Projetando uma amostra no referencial compartilhado com <span class='eq-inline'>c(z) = H†z</span>, os dois custos de representação são lidos diretamente dos fatores diagonais:</p><div class='eq'>θ(z) = arctan( ‖C† c(z)‖₂ / ‖S† c(z)‖₂ )</div><p>Esse é o primeiro teorema do artigo: a expressão no referencial do GSVD coincide com a definição por norma mínima. Computacionalmente, a decomposição custa O(d³) uma vez, e cada amostra depois custa um produto matriz–vetor, que é o motivo de o demo abaixo conseguir pontuar seu desenho em tempo real.</p>",
 
     "play.eyebrow": "Interativo",
     "play.title": "Desenhe um dígito. Veja o ângulo se mover.",
-    "play.p1": "Tudo abaixo roda sobre a decomposição real. A GSVD foi calculada offline com o pipeline da <code>gsvdlib</code> e o referencial resultante foi enviado ao seu navegador, que avalia a forma fechada enquanto você desenha e reproduz os ângulos da própria biblioteca dentro de 0,02°.",
+    "play.p1": "Tudo abaixo roda sobre a decomposição real. O GSVD foi calculado offline com o pipeline da <code>gsvdlib</code> e o referencial resultante foi enviado ao seu navegador, que avalia a forma fechada enquanto você desenha e reproduz os ângulos da própria biblioteca dentro de 0,02°.",
     "play.pairLabel": "Par de datasets",
     "play.drawTitle": "Sua entrada",
     "play.drawHint": "Desenhe com o mouse ou com o dedo. Traços grossos, centralizados, como um dígito do MNIST.",
@@ -298,7 +298,7 @@ export const STRINGS = {
     "next.q1Title": "Transferência, por direção",
     "next.q1": "Se A é um domínio de origem e B o de destino, o bloco compartilhado é um conjunto candidato de features transferíveis, e o bloco só-A é de onde viria a transferência negativa. Dá para usar o referencial para ranquear direções <em>antes</em> do fine-tuning, em vez de diagnosticar depois?",
     "next.q2Title": "Além de pares",
-    "next.q2": "A GSVD é inerentemente binária. Três ou mais domínios exigem ou a agregação de ângulos par a par, ou uma construção de fato multivia.",
+    "next.q2": "O GSVD é inerentemente binário. Três ou mais domínios exigem ou a agregação de ângulos par a par, ou uma construção de fato multivia.",
     "next.q3Title": "Robustez",
     "next.q3": "Quão sensível é θ a truncamento de posto, pré-processamento e ruído? E qual é o comportamento correto quando z cai fora da interseção dos dois espaços-coluna?",
     "next.personalTitle": "Uma nota pessoal",
@@ -317,7 +317,7 @@ export const STRINGS = {
     "code.libTitle": "gsvdlib (Python)",
     "code.libP": "Um port do pipeline original para NumPy/SciPy. A SciPy não expõe o <code>ggsvd3</code> do LAPACK, então a fatoração é reconstruída pela construção de Paige–Saunders (QR pivotado mais uma decomposição CS) e validada contra a referência Julia/LAPACK a 1e-13. Nada nela é específico do MNIST: qualquer matriz com rótulos funciona pelo protocolo <code>VectorDataset</code>, e a camada de plots aceita renderizadores plugáveis.",
     "code.jlTitle": "gsvd-alignment-angle (Julia)",
-    "code.jlP": "O repositório original de experimentos por trás do artigo: o pré-processamento da GSVD, a pontuação por ângulo, os gráficos de distribuição e a reconstrução das direções representativas.",
+    "code.jlP": "O repositório original de experimentos por trás do artigo: o pré-processamento do GSVD, a pontuação por ângulo, os gráficos de distribuição e a reconstrução das direções representativas.",
     "code.snippetTitle": "Seis linhas",
     "code.wantMore": "Para rodar nas suas próprias matrizes, a biblioteca é o caminho mais rápido. Ela aceita qualquer array com rótulos, não só imagens.",
 
