@@ -9,10 +9,14 @@ tracking. Everything is plain HTML, CSS and ES modules.
 
 ## Publishing on GitHub Pages
 
-1. Create a repository (e.g. `eduardamarques.github.io` for the root domain, or
-   any name for a project page).
-2. Copy the contents of this folder to the repository root and push.
-3. In **Settings → Pages**, set the source to the `main` branch, folder `/`.
+This site is published from
+[`eduardamarks1/gsvd-iclr`](https://github.com/eduardamarks1/gsvd-iclr) at
+<https://eduardamarks1.github.io/gsvd-iclr/>, with Pages serving the `main`
+branch from the repository root.
+
+Every path in the page is relative (`assets/...`, `data/...`), so the site
+works unchanged whether it is served from a project subpath or from a domain
+root. Nothing needs rewriting if it ever moves.
 
 The `.nojekyll` file matters: without it GitHub Pages runs Jekyll, which skips
 files and folders whose names begin with an underscore.
