@@ -163,7 +163,7 @@ export const STRINGS = {
     "cite.copy": "Copy BibTeX",
     "cite.copied": "Copied",
 
-    "footer.built": "Research carried out at the Institute of Computing, UFRJ.",
+    "footer.built": "Research carried out at the Institute of Computing, UFRJ, funded by CNPq through a PIBIC scholarship.",
     "footer.thanks": "Thanks to Júlia Motta for her contribution to the experimental pipeline.",
     "footer.source": "Site source",
   },
@@ -329,7 +329,7 @@ export const STRINGS = {
     "cite.copy": "Copiar BibTeX",
     "cite.copied": "Copiado",
 
-    "footer.built": "Pesquisa realizada no Instituto de Computação, UFRJ.",
+    "footer.built": "Pesquisa realizada no Instituto de Computação, UFRJ, com financiamento do CNPq por meio de bolsa PIBIC.",
     "footer.thanks": "Agradecemos à Júlia Motta pela contribuição ao pipeline experimental.",
     "footer.source": "Código do site",
   },
