@@ -183,11 +183,11 @@ section:first-of-type { border-top: none; }
 
 .repo-title { display: flex; align-items: center; gap: 0.5rem; }
 .gh-link {
-  display: inline-flex; color: var(--text-muted); text-decoration: none;
+  display: inline-flex; flex: none; color: var(--text-muted); text-decoration: none;
   /* a 16px mark is a small target, so the padding does the reaching */
   padding: 0.3rem; margin: -0.3rem; border-radius: 6px;
 }
-.gh-link svg { width: 17px; height: 17px; display: block; }
+.gh-link svg { width: 17px; height: 17px; display: block; flex: none; }
 .gh-link:hover { color: var(--text-primary); background: var(--surface-2); }
 
 .angle-dot {
