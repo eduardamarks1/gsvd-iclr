@@ -60,7 +60,7 @@ export const STRINGS = {
     "idea.mathSummary": "See the definition",
     "idea.mathBody": "<p>For a sample <span class='eq-inline'>z</span> in <span class='eq-inline'>col(A) ∩ col(B)</span>, the co-span fiber is the set of all compatible coefficient pairs:</p><div class='eq'>R(z) = { (x, y) : Ax = By = z }</div><p>Taking the minimum-norm representative on each side (that is, <span class='eq-inline'>x ⊥ Ker(A)</span> and <span class='eq-inline'>y ⊥ Ker(B)</span>) makes the two costs canonical, and the alignment angle is</p><div class='eq'>θ(z) = arctan( ‖x‖₂ / ‖y‖₂ ) ∈ [0, π/2]</div><p>Equal costs give θ = π/4. The arctan is what bounds the score and makes it symmetric under swapping A and B: the swap sends θ to π/2 − θ.</p>",
 
-    "machine.eyebrow": "The machine",
+    "machine.eyebrow": "GSVD: The machine",
     "machine.title": "The GSVD hands you the coordinate system",
     "machine.p1": "Computing that angle by brute force for every sample would be hopeless. The Generalized Singular Value Decomposition does the work once, up front: it factors both matrices against a shared frame.",
     "machine.p2": "<span class='eq-inline'>H</span> is the shared ambient reference frame. The diagonal factors <span class='eq-inline'>C</span> and <span class='eq-inline'>S</span> say how strongly each direction of that frame belongs to A or to B, and since <span class='eq-inline'>CᵀC + SᵀS = I</span>, each direction carries a single cosine/sine pair. That pair is an angle, already sitting in the decomposition rather than approximated from it.",
@@ -224,7 +224,7 @@ export const STRINGS = {
     "idea.mathSummary": "Ver a definição",
     "idea.mathBody": "<p>Para uma amostra <span class='eq-inline'>z</span> em <span class='eq-inline'>col(A) ∩ col(B)</span>, a fibra co-span é o conjunto de todos os pares de coeficientes compatíveis:</p><div class='eq'>R(z) = { (x, y) : Ax = By = z }</div><p>Tomar o representante de norma mínima de cada lado (isto é, <span class='eq-inline'>x ⊥ Ker(A)</span> e <span class='eq-inline'>y ⊥ Ker(B)</span>) torna os dois custos canônicos, e o ângulo de alinhamento é</p><div class='eq'>θ(z) = arctan( ‖x‖₂ / ‖y‖₂ ) ∈ [0, π/2]</div><p>Custos iguais dão θ = π/4. A arcotangente é o que limita o escore e o torna simétrico ao trocar A e B: a troca leva θ em π/2 − θ.</p>",
 
-    "machine.eyebrow": "A máquina",
+    "machine.eyebrow": "GSVD: A máquina",
     "machine.title": "O GSVD entrega o sistema de coordenadas",
     "machine.p1": "Calcular esse ângulo por força bruta para cada amostra seria inviável. A Decomposição em Valores Singulares Generalizada faz o trabalho uma vez, de antemão: ela fatora as duas matrizes contra um referencial compartilhado.",
     "machine.p2": "<span class='eq-inline'>H</span> é o referencial ambiente compartilhado. Os fatores diagonais <span class='eq-inline'>C</span> e <span class='eq-inline'>S</span> dizem o quanto cada direção desse referencial pertence a A ou a B e, como <span class='eq-inline'>CᵀC + SᵀS = I</span>, cada direção carrega um único par cosseno/seno. Esse par é um ângulo, que já está na decomposição em vez de ser aproximado a partir dela.",
