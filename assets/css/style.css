@@ -409,9 +409,14 @@ footer { border-top: 1px solid var(--border); padding: 2.5rem 0 3.5rem; backgrou
 footer .wrap { display: flex; flex-wrap: wrap; gap: 2rem; justify-content: space-between; }
 footer p { font-size: 0.85rem; color: var(--text-muted); }
 
-/* The personal note, contacts and citation are full-width cards, so their
-   prose needs to drop the reading-measure cap that <p> carries by default. */
-#next .card.card-pad-lg p, #code > .wrap > div > p { max-width: none; }
+/* These blocks span the container, so their prose drops the reading-measure
+   cap that <p> and .lede carry by default: the personal note, contacts and
+   citation cards, and the two section leads that introduce a full-width
+   figure below them. */
+#next .card.card-pad-lg p,
+#code > .wrap > div > p,
+#play > .wrap > p[data-i18n="play.p1"],
+#next .lede { max-width: none; }
 
 .footer-me { color: var(--text-primary); font-weight: 550; }
 .footer-me a { color: inherit; }
