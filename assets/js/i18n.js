@@ -154,6 +154,8 @@ export const STRINGS = {
     "code.libP": "A NumPy/SciPy port of the original pipeline. SciPy does not expose LAPACK's <code>ggsvd3</code>, so the factorization is rebuilt from the Paige–Saunders construction (pivoted QR plus a CS decomposition) and validated against the Julia/LAPACK reference to 1e-13. Nothing in it is MNIST-specific: any matrix with labels works through the <code>VectorDataset</code> protocol, and the plotting layer takes pluggable renderers.",
     "code.jlTitle": "gsvd-alignment-angle (Julia)",
     "code.jlP": "The original experiment repository behind the paper: the GSVD preprocessing, the angle scoring, the distribution plots and the reconstruction of representative directions.",
+    "code.ghLib": "gsvdlib on GitHub",
+    "code.ghJl": "gsvd-alignment-angle on GitHub",
     "code.snippetTitle": "Six lines",
     "code.wantMore": "To run it on your own matrices, the library is the fastest path. It takes any array with labels, not just images.",
 
@@ -318,6 +320,8 @@ export const STRINGS = {
     "code.libP": "Um port do pipeline original para NumPy/SciPy. A SciPy não expõe o <code>ggsvd3</code> do LAPACK, então a fatoração é reconstruída pela construção de Paige–Saunders (QR pivotado mais uma decomposição CS) e validada contra a referência Julia/LAPACK a 1e-13. Nada nela é específico do MNIST: qualquer matriz com rótulos funciona pelo protocolo <code>VectorDataset</code>, e a camada de plots aceita renderizadores plugáveis.",
     "code.jlTitle": "gsvd-alignment-angle (Julia)",
     "code.jlP": "O repositório original de experimentos por trás do artigo: o pré-processamento do GSVD, a pontuação por ângulo, os gráficos de distribuição e a reconstrução das direções representativas.",
+    "code.ghLib": "gsvdlib no GitHub",
+    "code.ghJl": "gsvd-alignment-angle no GitHub",
     "code.snippetTitle": "Seis linhas",
     "code.wantMore": "Para rodar nas suas próprias matrizes, a biblioteca é o caminho mais rápido. Ela aceita qualquer array com rótulos, não só imagens.",
 

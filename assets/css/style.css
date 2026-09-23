@@ -181,6 +181,15 @@ section:first-of-type { border-top: none; }
 :root[data-lang="en"] .flag-br { display: block; }
 :root[data-lang="en"] .flag-us { display: none; }
 
+.repo-title { display: flex; align-items: center; gap: 0.5rem; }
+.gh-link {
+  display: inline-flex; color: var(--text-muted); text-decoration: none;
+  /* a 16px mark is a small target, so the padding does the reaching */
+  padding: 0.3rem; margin: -0.3rem; border-radius: 6px;
+}
+.gh-link svg { width: 17px; height: 17px; display: block; }
+.gh-link:hover { color: var(--text-primary); background: var(--surface-2); }
+
 .angle-dot {
   display: inline-block; width: 0.62em; height: 0.62em; border-radius: 50%;
   margin-right: 0.4em; vertical-align: baseline; flex: none;
