@@ -393,12 +393,16 @@
       </div>
       <div>
         <h3 style="margin-top:0;font-size:1rem" data-i18n="code.snippetTitle">Six lines</h3>
-<pre class="bib" style="font-size:.8rem"><code>from gsvdlib import MNISTDataset, prepare_data, evaluate_pair
+<pre class="bib" style="font-size:.78rem"><code>pip install git+https://github.com/eduardamarks1/gsvdlib
 
-ds   = MNISTDataset()
-prep = prepare_data(ds, 4, 9, n_A=900, n_B=800)
-angles_A, angles_B, acc = evaluate_pair(ds, 4, 9, prep)
-# -> per-sample θ for every test image, plus the accuracy</code></pre>
+from gsvdlib import MNISTDataset, run_pair_experiment
+
+ds = MNISTDataset()              # downloads MNIST once
+rows, angles = run_pair_experiment(
+    ds, [(1, 5), (0, 7), (4, 9), (3, 9)])
+
+angles_A, angles_B = angles[(4, 9)]   # θ for every test image
+# rows: precision, recall, F1, accuracy and CKA per pair</code></pre>
         <p class="note" style="margin-top:1rem" data-i18n="code.wantMore"></p>
       </div>
     </div>

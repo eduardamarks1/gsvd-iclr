@@ -156,8 +156,8 @@ export const STRINGS = {
     "code.jlP": "The original experiment repository behind the paper: the GSVD preprocessing, the angle scoring, the distribution plots and the reconstruction of representative directions.",
     "code.ghLib": "gsvdlib on GitHub",
     "code.ghJl": "gsvd-alignment-angle on GitHub",
-    "code.snippetTitle": "Six lines",
-    "code.wantMore": "To run it on your own matrices, the library is the fastest path. It takes any array with labels, not just images.",
+    "code.snippetTitle": "Quick start",
+    "code.wantMore": "That single call reproduces the metric table above for all four digit pairs. For data of your own, <code>ArrayDataset</code> takes any matrix with labels, not just images.",
 
     "cite.title": "Citation",
     "cite.copy": "Copy BibTeX",
@@ -322,8 +322,8 @@ export const STRINGS = {
     "code.jlP": "O repositório original de experimentos por trás do artigo: o pré-processamento do GSVD, a pontuação por ângulo, os gráficos de distribuição e a reconstrução das direções representativas.",
     "code.ghLib": "gsvdlib no GitHub",
     "code.ghJl": "gsvd-alignment-angle no GitHub",
-    "code.snippetTitle": "Seis linhas",
-    "code.wantMore": "Para rodar nas suas próprias matrizes, a biblioteca é o caminho mais rápido. Ela aceita qualquer array com rótulos, não só imagens.",
+    "code.snippetTitle": "Começo rápido",
+    "code.wantMore": "Essa única chamada reproduz a tabela de métricas acima para os quatro pares de dígitos. Para dados seus, o <code>ArrayDataset</code> aceita qualquer matriz com rótulos, não só imagens.",
 
     "cite.title": "Como citar",
     "cite.copy": "Copiar BibTeX",

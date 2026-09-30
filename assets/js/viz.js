@@ -66,69 +66,90 @@ export function angleColor(deg) {
    ====================================================================== */
 
 export function createDial(host, { interactive = false, onChange = null } = {}) {
-  const W = 320, H = 252, cx = W / 2, cy = 166, R = 126;
+  // A quarter disc, not a half one: theta lives in [0, 90], so the arc spans
+  // exactly 90 degrees and the needle sits at the angle it reports. The origin
+  // is the corner of the first quadrant, the horizontal axis is "all A"
+  // (theta = 0) and the vertical axis is "all B" (theta = 90).
+  const W = 320, H = 300, ox = 44, oy = 206, R = 150;
   const svg = el("svg", {
     viewBox: `0 0 ${W} ${H}`, role: "img", class: "dial",
   });
   host.appendChild(svg);
 
-  // angle in [0,90] -> point on the arc (0 deg at left, 90 deg at right)
   const pt = (deg, r = R) => {
-    const rad = Math.PI - (deg / 90) * Math.PI;
-    return [cx + r * Math.cos(rad), cy - r * Math.sin(rad)];
+    const rad = (deg / 180) * Math.PI;
+    return [ox + r * Math.cos(rad), oy - r * Math.sin(rad)];
   };
 
   const defs = el("defs", {}, svg);
-  const grad = el("linearGradient", { id: "dialgrad", x1: "0", x2: "1" }, defs);
+  const gid = `dialgrad-${Math.random().toString(36).slice(2, 8)}`;
+  // gradientUnits userSpace so the ramp follows the arc, not the bounding box
+  const grad = el("linearGradient", {
+    id: gid, gradientUnits: "userSpaceOnUse",
+    x1: ox + R, y1: oy, x2: ox, y2: oy - R,
+  }, defs);
   for (let i = 0; i <= 10; i++) {
     el("stop", { offset: `${i * 10}%`, "stop-color": angleColor(i * 9) }, grad);
   }
 
-  // arc band
+  // the two axes the angle is measured between
+  el("line", {
+    x1: ox, y1: oy, x2: ox + R + 16, y2: oy,
+    stroke: css("--border"), "stroke-width": 1,
+  }, svg);
+  el("line", {
+    x1: ox, y1: oy, x2: ox, y2: oy - R - 16,
+    stroke: css("--border"), "stroke-width": 1,
+  }, svg);
+
   const [x0, y0] = pt(0), [x1, y1] = pt(90);
   el("path", {
-    d: `M ${x0} ${y0} A ${R} ${R} 0 0 1 ${x1} ${y1}`,
-    fill: "none", stroke: "url(#dialgrad)", "stroke-width": 14,
+    d: `M ${x0} ${y0} A ${R} ${R} 0 0 0 ${x1} ${y1}`,
+    fill: "none", stroke: `url(#${gid})`, "stroke-width": 13,
     "stroke-linecap": "round",
   }, svg);
 
-  // ticks
+  // ticks and labels live outside the band, clear of the needle's sweep
   [0, 15, 30, 45, 60, 75, 90].forEach((d) => {
-    const [ax, ay] = pt(d, R - 11), [bx, by] = pt(d, d === 45 ? R - 24 : R - 18);
+    const [ax, ay] = pt(d, R + 8), [bx, by] = pt(d, d === 45 ? R + 17 : R + 14);
     el("line", {
       x1: ax, y1: ay, x2: bx, y2: by,
       stroke: css("--border-strong"), "stroke-width": d === 45 ? 2 : 1,
     }, svg);
-    const [tx, ty] = pt(d, R - 36);
+    const [tx, ty] = pt(d, R + 30);
     el("text", {
-      x: tx, y: ty + 4, "text-anchor": "middle", "font-size": 10,
+      x: tx, y: ty + 3.5, "text-anchor": "middle", "font-size": 10,
       fill: css("--text-muted"), "font-variant-numeric": "tabular-nums",
-    }, svg).textContent = `${d}°`;
+    }, svg).textContent = `${d}\u00B0`;
   });
 
   const needle = el("line", {
-    x1: cx, y1: cy, x2: cx, y2: cy - R + 22,
+    x1: ox, y1: oy, x2: ox + R - 20, y2: oy,
     stroke: css("--text-primary"), "stroke-width": 3, "stroke-linecap": "round",
   }, svg);
-  el("circle", { cx, cy, r: 7, fill: css("--surface-0"), stroke: css("--text-primary"), "stroke-width": 3 }, svg);
+  el("circle", {
+    cx: ox, cy: oy, r: 6, fill: css("--surface-0"),
+    stroke: css("--text-primary"), "stroke-width": 3,
+  }, svg);
 
+  // the readout sits under the quadrant, clear of the sweep
   const readout = el("text", {
-    x: cx, y: cy + 46, "text-anchor": "middle", "font-size": 34,
+    x: ox + R / 2, y: oy + 52, "text-anchor": "middle", "font-size": 34,
     "font-weight": 600, fill: css("--text-primary"),
     "font-variant-numeric": "tabular-nums", "font-family": "var(--font-display)",
   }, svg);
   const caption = el("text", {
-    x: cx, y: cy + 68, "text-anchor": "middle", "font-size": 11,
+    x: ox + R / 2, y: oy + 74, "text-anchor": "middle", "font-size": 11,
     fill: css("--text-muted"), "letter-spacing": "0.06em",
   }, svg);
 
   let value = 45;
 
   function render() {
-    const [nx, ny] = pt(value, R - 22);
+    const [nx, ny] = pt(value, R - 20);
     needle.setAttribute("x2", nx);
     needle.setAttribute("y2", ny);
-    readout.textContent = `${value.toFixed(1)}°`;
+    readout.textContent = `${value.toFixed(1)}\u00B0`;
     svg.setAttribute("aria-label", `theta = ${value.toFixed(1)} degrees`);
   }
 
@@ -145,9 +166,8 @@ export function createDial(host, { interactive = false, onChange = null } = {}) 
       const r = svg.getBoundingClientRect();
       const px = ((ev.clientX - r.left) / r.width) * W;
       const py = ((ev.clientY - r.top) / r.height) * H;
-      let deg = (Math.atan2(cy - py, px - cx) * 180) / Math.PI;   // 0 right, 180 left
-      deg = Math.min(90, Math.max(0, ((180 - deg) / 180) * 90));
-      return deg;
+      const deg = (Math.atan2(oy - py, px - ox) * 180) / Math.PI;
+      return Math.min(90, Math.max(0, deg));
     };
     let dragging = false;
     const move = (ev) => {
