@@ -393,16 +393,17 @@
       </div>
       <div>
         <h3 style="margin-top:0;font-size:1rem" data-i18n="code.snippetTitle">Six lines</h3>
-<pre class="bib" style="font-size:.78rem"><code>pip install git+https://github.com/eduardamarks1/gsvdlib
+<pre class="bib code-snippet"><code>from gsvdlib import (MNISTDataset, prepare_data,
+                     theta_angles)
 
-from gsvdlib import MNISTDataset, run_pair_experiment
+ds = MNISTDataset()
+g  = prepare_data(ds, 4, 9).gsvd   # frame, once
 
-ds = MNISTDataset()              # downloads MNIST once
-rows, angles = run_pair_experiment(
-    ds, [(1, 5), (0, 7), (4, 9), (3, 9)])
+Z = ds.get_class(4, "test")[:, :5]  # new samples
+theta_angles(Z, g.C, g.S, g.H)      # θ per column
 
-angles_A, angles_B = angles[(4, 9)]   # θ for every test image
-# rows: precision, recall, F1, accuracy and CKA per pair</code></pre>
+# -> [36.9 38.5 36.7 36.7 36.8]
+#    under 45°, so each reads as digit 4</code></pre>
         <p class="note" style="margin-top:1rem" data-i18n="code.wantMore"></p>
       </div>
     </div>
