@@ -54,7 +54,8 @@ SPRITE_COLS = 40
 # truncation levels shown in the "how many directions" section (fraction of s_max)
 TRUNC_GRID = (0.0, 1e-4, 1e-3, 1e-2, 3e-2, 5e-2, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5)
 TRUNC_PAIR = ("mnist", 4, 9)
-TRUNC_EXAMPLES = (1, 2, 4)  # test 4s whose open top is closed in the example
+TRUNC_EXAMPLES = (("A", 1), ("B", 2), ("B", 4))  # test digits that get the stray dot
+TRUNC_DOT = (24, 3)         # pixel (row, col) of the dot, near the bottom-left corner
 
 MNIST_PAIRS = [(1, 5), (0, 7), (4, 9), (3, 9)]
 FASHION_PAIRS = [(0, 4), (2, 3), (7, 9), (0, 7)]
@@ -127,31 +128,12 @@ class TruncatedTheta:
                                      np.linalg.norm(self.Ci @ c, axis=0)))
 
 
-def close_top(img: np.ndarray):
-    """Close the open top of a 4 the way a user would on the 280 px pad:
-    one stroke (the pad's brush) from the top of the left arm, over the top,
-    to the top of the right arm. Returns the 28x28 result, or None if the
-    digit has no two open arms."""
-    m = img.sum()
-    cx = (img.sum(axis=0) * np.arange(28)).sum() / m
-
-    def top(left):
-        for y in range(28):
-            for x in range(28):
-                if img[y, x] > 0.5 and (x < cx - 2 if left else x > cx + 2):
-                    return x, y
-        return None
-
-    L, R = top(True), top(False)
-    if L is None or R is None or abs(L[1] - R[1]) > 8:
-        return None
+def add_dot(img: np.ndarray, row: int, col: int):
+    """One tap of the playground brush (28 px wide on the 280 px pad) centred
+    on pixel (row, col), area-averaged back to 28x28."""
     big = Image.fromarray((img * 255).astype(np.uint8)).resize((280, 280), Image.NEAREST)
-    pts = [(L[0] * 10 + 5, L[1] * 10 + 5), ((L[0] + R[0]) * 5 + 5, min(L[1], R[1]) * 10 - 25),
-           (R[0] * 10 + 5, R[1] * 10 + 5)]
-    draw = ImageDraw.Draw(big)
-    draw.line(pts, fill=255, width=28, joint="curve")
-    for q in (pts[0], pts[-1]):
-        draw.ellipse((q[0] - 14, q[1] - 14, q[0] + 14, q[1] + 14), fill=255)
+    cy, cx = row * 10 + 5, col * 10 + 5
+    ImageDraw.Draw(big).ellipse((cx - 14, cy - 14, cx + 14, cy + 14), fill=255)
     return (np.asarray(big, float) / 255).reshape(28, 10, 28, 10).mean(axis=(1, 3))
 
 
@@ -172,7 +154,7 @@ def recommended_threshold(ds, label_A, label_B, g, mu) -> tuple[float, float]:
 TRUNC_STATE: dict = {}
 
 
-def truncation_section(tt: TruncatedTheta, X_A, X_B, hist_edges) -> dict:
+def truncation_section(tt: TruncatedTheta, X_A, X_B) -> dict:
     """Everything the truncation section shows for one pair, except the
     validation curve (averaged over all pairs in main)."""
     s = tt.s[tt.s > 0]
@@ -180,30 +162,24 @@ def truncation_section(tt: TruncatedTheta, X_A, X_B, hist_edges) -> dict:
     levels = []
     for r in TRUNC_GRID:
         k = int(tt.keep(r).sum())
-        tA, tB = tt(X_A, r), tt(X_B, r)
-        levels.append({
-            "rcond": r, "kept": k, "energy": round(float(energy[k - 1]), 4),
-            "hist_A": np.histogram(tA, bins=hist_edges)[0].tolist(),
-            "hist_B": np.histogram(tB, bins=hist_edges)[0].tolist(),
-            "test_auc": round(auc(tA, tB), 4),
-            "test_acc45": round(float(((tA < 45).mean() + (tB >= 45).mean()) / 2), 4),
-        })
+        levels.append({"rcond": r, "kept": k, "energy": round(float(energy[k - 1]), 4)})
 
     # singular directions as images, strongest first
     layout = sprite(normalize_each(tt.U[:, :s.size]), OUT / "truncation_dirs.png", cols=25)
 
-    # the closed-top 4: theta and |c| without and with the default cut
+    # a stray dot near the corner: theta and |c| without and with the default cut
     examples = []
-    for i in TRUNC_EXAMPLES:
-        orig = X_A[:, i].reshape(28, 28)
-        closed = close_top(orig)
-        z = np.stack([orig.ravel(), closed.ravel()], axis=1)
+    for side, i in TRUNC_EXAMPLES:
+        orig = (X_A if side == "A" else X_B)[:, i].reshape(28, 28)
+        dotted = add_dot(orig, *TRUNC_DOT)
+        z = np.stack([orig.ravel(), dotted.ravel()], axis=1)
         th0, th1 = tt(z, 0.0), tt(z, DEFAULT_RCOND)
         n0 = np.linalg.norm(tt.coeffs(z, 0.0), axis=0)
         n1 = np.linalg.norm(tt.coeffs(z, DEFAULT_RCOND), axis=0)
         examples.append({
+            "side": side,
             "orig": np.round(orig.ravel() * 255).astype(int).tolist(),
-            "closed": np.round(closed.ravel() * 255).astype(int).tolist(),
+            "dotted": np.round(dotted.ravel() * 255).astype(int).tolist(),
             "theta_plain": [round(float(v), 2) for v in th0],
             "theta_cut": [round(float(v), 2) for v in th1],
             "norm_plain": [round(float(v), 2) for v in n0],
@@ -212,7 +188,7 @@ def truncation_section(tt: TruncatedTheta, X_A, X_B, hist_edges) -> dict:
     print(f"    truncation section: {s.size} directions, default keeps "
           f"{int(tt.keep(DEFAULT_RCOND).sum())}")
     return {"sigma": [float(f"{v:.4g}") for v in s], "levels": levels,
-            "sprite_dirs": layout, "examples": examples, "hist_edges": hist_edges.tolist()}
+            "sprite_dirs": layout, "examples": examples}
 
 
 def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
@@ -310,7 +286,7 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
         "val_auc_by_rcond": [round(v, 5) for v in val_auc],
     }
     if (family, label_A, label_B) == TRUNC_PAIR:
-        TRUNC_STATE.update(truncation_section(tt, X_A, X_B, hist_edges))
+        TRUNC_STATE.update(truncation_section(tt, X_A, X_B))
     (OUT / f"{slug}.json").write_text(json.dumps(meta), encoding="utf-8")
     print(f"    accuracy {m['accuracy']:.4f}  CKA {cka:.4f}  k={P.shape[0]}  "
           f"recommended threshold {tau:.1f} deg")

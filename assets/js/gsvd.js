@@ -15,7 +15,7 @@
 
 const DATA = "data/";
 /* Bumped with every data regeneration so browsers do not mix old and new files. */
-const V = "?v=20261004";
+const V = "?v=20261004.2";
 
 /* --- IEEE 754 half precision -> Float32, via a 65536-entry lookup ------- */
 

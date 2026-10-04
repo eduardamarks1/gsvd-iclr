@@ -508,3 +508,5 @@ pre.bib {
 .trunc-strip canvas { width: 56px; height: 56px; image-rendering: pixelated; border-radius: 4px; }
 .trunc-strip figcaption { font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .trunc-strip .gap { align-self: center; color: var(--text-muted); padding: 0 0.2rem; }
+#truncation p { max-width: none; }
+.trunc-ex-name { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }

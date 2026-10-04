@@ -1,11 +1,11 @@
-import { applyLang, className, detectLang, t } from "./i18n.js?v=20261004";
+import { applyLang, className, detectLang, t } from "./i18n.js?v=20261004.2";
 import {
   loadIndex, loadMeta, loadOperator, loadImage, spriteURL, theta,
-} from "./gsvd.js?v=20261004";
+} from "./gsvd.js?v=20261004.2";
 import {
   angleColor, clear, createCospan, createDial, createHistogram,
-  drawBlocks, drawLevelCurve, drawScatter, drawSpectrum,
-} from "./viz.js?v=20261004";
+  drawBlocks, drawScatter, drawSpectrum,
+} from "./viz.js?v=20261004.2";
 
 /* MNIST pairs shown in the results table. Their numbers are read from the
    generated data/<slug>.json (tools/precompute.py, pooled centering), so the
@@ -615,8 +615,8 @@ async function renderResults() {
 /* ======================== truncation section ========================= */
 
 /* Everything here comes from data/truncation.json (tools/precompute.py):
-   singular values of H for one pair, test histograms and metrics at each
-   truncation level, and the mean validation AUC over all pairs. */
+   singular values of H for one pair, directions kept and energy at each
+   truncation level, and the stray-dot examples. */
 const trunc = { data: null, sprite: null, level: 0 };
 
 const fmtNum = (v, d) => {
@@ -664,7 +664,10 @@ function renderTruncExamples() {
     box.className = "trunc-ex";
     const imgs = document.createElement("div");
     imgs.className = "trunc-ex-imgs";
-    [["orig", "trunc.exOrig"], ["closed", "trunc.exClosed"]].forEach(([key, label]) => {
+    const name = document.createElement("p");
+    name.className = "trunc-ex-name";
+    name.textContent = className(ex.side === "A" ? "Digit 4" : "Digit 9", lang);
+    [["orig", "trunc.exOrig"], ["dotted", "trunc.exDot"]].forEach(([key, label]) => {
       const fig = document.createElement("figure");
       const c = document.createElement("canvas");
       paintDigit(c, ex[key]);
@@ -678,12 +681,12 @@ function renderTruncExamples() {
         `<td class="${hot && j === 1 ? "hot" : ""}">${fmtNum(v, digits)}${unit}</td>`).join("")}</tr>`;
     const table = document.createElement("table");
     table.innerHTML =
-      `<thead><tr><th></th><th>${t("trunc.exOrig", lang)}</th><th>${t("trunc.exClosed", lang)}</th></tr></thead>`
-      + `<tbody>${row("trunc.exThetaPlain", ex.theta_plain, 1, "°", false)}`
+      `<thead><tr><th></th><th>${t("trunc.exOrig", lang)}</th><th>${t("trunc.exDot", lang)}</th></tr></thead>`
+      + `<tbody>${row("trunc.exThetaPlain", ex.theta_plain, 1, "°", true)}`
       + `${row("trunc.exThetaCut", ex.theta_cut, 1, "°", false)}`
       + `${row("trunc.exNormPlain", ex.norm_plain, 1, "", true)}`
       + `${row("trunc.exNormCut", ex.norm_cut, 2, "", false)}</tbody>`;
-    box.append(imgs, table);
+    box.append(name, imgs, table);
     host.appendChild(box);
   });
 }
@@ -752,32 +755,6 @@ function renderTruncation() {
   });
   renderTruncStrips(L.kept, total);
 
-  drawLevelCurve(document.getElementById("trunc-auc"), {
-    values: d.val_auc_mean.map((a) => 1 - a), ticks: d.grid.map(levelLabel), current: trunc.level, chosen,
-    labels: {
-      x: t("trunc.axisLevel", lang), y: t("trunc.axisMisordered", lang),
-      fmtY: (v) => `${lang === "pt" ? String(+(v * 100).toPrecision(2)).replace(".", ",") : +(v * 100).toPrecision(2)}%`,
-      chosen: t("trunc.chosen", lang),
-      tip: (lev, v) => fill(t("trunc.tipLevel", lang), { level: lev, auc: fmtNum(1 - v, 4), err: fmtPct(v) }),
-      aria: t("trunc.aucTitle", lang),
-    },
-  });
-
-  const hist = createHistogram(document.getElementById("trunc-hist"), {
-    threshold: TAU_DEFAULT,
-    labels: {
-      theta: t("play.axisTheta", lang), count: t("play.axisCount", lang),
-      threshold: t("play.tauShort", lang), fmt: fmtDeg,
-    },
-  });
-  hist.draw({
-    hist_edges: d.hist_edges, hist_A: L.hist_A, hist_B: L.hist_B,
-    name_A: className("Digit 4", lang), name_B: className("Digit 9", lang),
-  }, null);
-  document.getElementById("trunc-hist-stats").innerHTML = fill(t("trunc.histStats", lang), {
-    auc: fmtNum(L.test_auc, 3), acc: fmtPct(L.test_acc45),
-  });
-
   const def = d.levels[chosen];
   document.getElementById("trunc-dr1").textContent = fill(t("trunc.dr1", lang), {
     kept: def.kept, total, share: pct0(def.kept / total), energy: fmtPct(def.energy),
@@ -787,10 +764,10 @@ function renderTruncation() {
 
 async function initTruncation() {
   try {
-    const r = await fetch("data/truncation.json?v=20261004");
+    const r = await fetch("data/truncation.json?v=20261004.2");
     if (!r.ok) throw new Error(`truncation.json: ${r.status}`);
     trunc.data = await r.json();
-    trunc.sprite = await loadImage("data/truncation_dirs.png?v=20261004");
+    trunc.sprite = await loadImage("data/truncation_dirs.png?v=20261004.2");
   } catch (err) {
     console.error(err);
     document.getElementById("truncation").hidden = true;

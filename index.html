@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>An Alignment Angle Is All You Need: GSVD for dataset comparison</title>
-<meta name="description" content="Comparing two datasets through their geometry: the GSVD gives a joint frame, and a single angle θ(z) says whether a sample is better explained by one dataset, the other, or both.">
+<meta name="description" content="Comparing two datasets through their geometry. The GSVD gives a joint frame, and a single angle θ(z) says whether a sample is better explained by one dataset, the other, or both.">
 <meta property="og:title" content="An Alignment Angle Is All You Need">
 <meta property="og:description" content="GSVD for geometry-grounded dataset comparison. ICLR 2026.">
 <meta property="og:type" content="website">
@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Figtree:wght@400..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=20261004">
+<link rel="stylesheet" href="assets/css/style.css?v=20261004.2">
 </head>
 <body>
 <a class="skip-link" href="#idea">Skip to content</a>
@@ -349,19 +349,6 @@
       </div>
     </div>
 
-    <div class="two-col" style="margin-top:1rem;gap:1rem;align-items:start">
-      <div class="card">
-        <h3 style="margin-top:0;font-size:1rem" data-i18n="trunc.aucTitle"></h3>
-        <div id="trunc-auc"></div>
-        <p class="figure-caption" data-i18n="trunc.aucCaption"></p>
-      </div>
-      <div class="card">
-        <h3 style="margin-top:0;font-size:1rem" data-i18n="trunc.histTitle"></h3>
-        <div id="trunc-hist"></div>
-        <p class="tau-stats" id="trunc-hist-stats"></p>
-      </div>
-    </div>
-
     <h3 style="margin-top:2.2rem" data-i18n="trunc.drTitle"></h3>
     <p class="lede-narrow" id="trunc-dr1"></p>
     <p class="lede-narrow" data-i18n="trunc.dr2"></p>
@@ -519,6 +506,6 @@ theta_angles(Z, g.C, g.S, g.H)      # θ per column
   </div>
 </footer>
 
-<script type="module" src="assets/js/main.js?v=20261004"></script>
+<script type="module" src="assets/js/main.js?v=20261004.2"></script>
 </body>
 </html>
