@@ -17,7 +17,8 @@ const RESULT_PAIRS = [
 let resultRows = null;
 
 let lang = detectLang();
-const state = { slug: null, meta: null, op: null, testSprite: null };
+const TAU_DEFAULT = 45;
+const state = { slug: null, meta: null, op: null, testSprite: null, threshold: TAU_DEFAULT };
 
 /* ======================= chrome: theme, language, nav ================== */
 
@@ -336,7 +337,7 @@ function scoreDrawing() {
   const deg = theta(state.op, z);
   playDial.setValue(deg, "");
   histogram.setMarker(deg);
-  const name = className(deg <= 45 ? state.meta.name_A : state.meta.name_B, lang);
+  const name = className(deg < state.threshold ? state.meta.name_A : state.meta.name_B, lang);
   verdict.style.color = "var(--text-primary)";
   verdict.replaceChildren(dot(deg), document.createTextNode(name));
 }
@@ -440,7 +441,8 @@ async function selectPair(slug) {
     document.getElementById("legend-a").textContent = className(meta.name_A, lang);
     document.getElementById("legend-b").textContent = className(meta.name_B, lang);
     clearPad(); padDirty = false;
-    scoreDrawing();
+    labelRecoButton();
+    setThreshold(state.threshold);
     document.getElementById("bin-title").textContent = t("play.binHint", lang);
     const strip = document.getElementById("bin-strip");
     strip.getContext("2d").clearRect(0, 0, strip.width, strip.height);
@@ -459,11 +461,88 @@ async function initPlayground() {
   select.addEventListener("change", () => selectPair(select.value));
 
   playDial = createDial(document.getElementById("play-dial"), {});
-  histogram = createHistogram(document.getElementById("hist"), {
-    onBin: showBin,
-    labels: { theta: t("play.axisTheta", lang), count: t("play.axisCount", lang) },
-  });
+  histogram = makeHistogram();
+  initThreshold();
   await selectPair(select.value);
+}
+
+/* ======================== decision threshold ======================== */
+
+/* One decimal, with the reader's decimal separator. */
+const fmtDeg = (v) => {
+  const s = v.toFixed(1).replace(/\.0$/, "");
+  return lang === "pt" ? s.replace(".", ",") : s;
+};
+const fmtPct = (x) => {
+  const s = (x * 100).toFixed(1);
+  return (lang === "pt" ? s.replace(".", ",") : s) + "%";
+};
+/* Accepts "42.3" or "42,3"; null unless it is a number in [0, 90]. */
+function parseDeg(str) {
+  const v = Number(String(str).trim().replace(",", "."));
+  if (String(str).trim() === "" || !Number.isFinite(v) || v < 0 || v > 90) return null;
+  return Math.round(v * 10) / 10;
+}
+
+function makeHistogram() {
+  return createHistogram(document.getElementById("hist"), {
+    onBin: showBin,
+    threshold: state.threshold,
+    labels: {
+      theta: t("play.axisTheta", lang), count: t("play.axisCount", lang),
+      threshold: t("play.tauShort", lang), fmt: fmtDeg,
+    },
+  });
+}
+
+function labelRecoButton() {
+  const btn = document.getElementById("tau-reco");
+  const reco = state.meta?.threshold?.recommended;
+  btn.hidden = reco == null;
+  if (reco != null) btn.textContent = `${t("play.tauReco", lang)} ${fmtDeg(reco)}°`;
+}
+
+function renderTauStats() {
+  const out = document.getElementById("tau-stats");
+  const meta = state.meta;
+  if (!meta) { out.textContent = ""; return; }
+  const thr = state.threshold;
+  const okA = meta.angles_A.filter((a) => a < thr).length;
+  const okB = meta.angles_B.filter((a) => a >= thr).length;
+  const nA = meta.angles_A.length, nB = meta.angles_B.length;
+  out.innerHTML = `${t("play.tauStatsAt", lang)} <strong>${fmtDeg(thr)}°</strong>: `
+    + `${t("play.tauAcc", lang)} <strong>${fmtPct((okA + okB) / (nA + nB))}</strong> · `
+    + `${t("play.tauPerClass", lang)}: ${className(meta.name_A, lang)} ${fmtPct(okA / nA)}, `
+    + `${className(meta.name_B, lang)} ${fmtPct(okB / nB)}`;
+}
+
+function setThreshold(v, { syncInput = true } = {}) {
+  state.threshold = v;
+  const input = document.getElementById("tau-input");
+  if (syncInput) input.value = fmtDeg(v);
+  input.removeAttribute("aria-invalid");
+  const reco = state.meta?.threshold?.recommended;
+  document.getElementById("tau-reset").setAttribute("aria-pressed", String(v === TAU_DEFAULT));
+  document.getElementById("tau-reco").setAttribute("aria-pressed", String(reco != null && v === reco));
+  if (histogram) histogram.setThreshold(v);
+  renderTauStats();
+  scoreDrawing();
+}
+
+function initThreshold() {
+  const input = document.getElementById("tau-input");
+  input.addEventListener("input", () => {
+    const v = parseDeg(input.value);
+    if (v === null) { input.setAttribute("aria-invalid", "true"); return; }
+    setThreshold(v, { syncInput: false });
+  });
+  // on commit, show the value actually in use (rounded, or the last valid one)
+  input.addEventListener("change", () => setThreshold(parseDeg(input.value) ?? state.threshold));
+  document.getElementById("tau-reco").addEventListener("click", () => {
+    const reco = state.meta?.threshold?.recommended;
+    if (reco != null) setThreshold(reco);
+  });
+  document.getElementById("tau-reset").addEventListener("click", () => setThreshold(TAU_DEFAULT));
 }
 
 /* ============================ static results ========================= */
@@ -517,14 +596,12 @@ function redrawAll() {
   relabelPairSelect("#h-pair-select");
   renderMachine();
   if (state.meta) {
-    histogram = createHistogram(document.getElementById("hist"), {
-      onBin: showBin,
-      labels: { theta: t("play.axisTheta", lang), count: t("play.axisCount", lang) },
-    });
+    histogram = makeHistogram();
     histogram.draw(localisedMeta(state.meta), null);
     document.getElementById("legend-a").textContent = className(state.meta.name_A, lang);
     document.getElementById("legend-b").textContent = className(state.meta.name_B, lang);
-    scoreDrawing();
+    labelRecoButton();
+    setThreshold(state.threshold);
   }
 }
 

@@ -489,7 +489,7 @@ export function drawBlocks(host, blocks, labels) {
    Theta histogram — paired bars per bin, clickable
    ====================================================================== */
 
-export function createHistogram(host, { onBin = null, labels }) {
+export function createHistogram(host, { onBin = null, labels, threshold = 45 }) {
   const W = 680, H = 300;
   const m = { top: 14, right: 12, bottom: 44, left: 52 };
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
@@ -498,6 +498,8 @@ export function createHistogram(host, { onBin = null, labels }) {
   const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
 
   let state = null;
+  let thr = threshold;
+  let lastMarker = null;
 
   function draw(meta, marker) {
     clear(svg);
@@ -539,16 +541,6 @@ export function createHistogram(host, { onBin = null, labels }) {
       fill: css("--text-muted"),
     }, g).textContent = labels.theta;
 
-    // the 45 degree reference
-    const x45 = m.left + 0.5 * iw;
-    el("line", {
-      x1: x45, y1: m.top, x2: x45, y2: m.top + ih,
-      stroke: css("--text-muted"), "stroke-width": 1.5, "stroke-dasharray": "5 4",
-    }, g);
-    el("text", {
-      x: x45 + 5, y: m.top + 12, "font-size": 10, fill: css("--text-muted"),
-    }, g).textContent = "45°";
-
     // bars: A left half, B right half of each bin, 2px surface gap
     const half = (bw - 3) / 2;
     for (let i = 0; i < nb; i++) {
@@ -584,13 +576,47 @@ export function createHistogram(host, { onBin = null, labels }) {
       if (onBin) hit.addEventListener("click", () => onBin(i, lo, hi));
     }
 
+    // the 45 degree reference, dashed, only when the decision threshold moved
+    const tg = el("g", { "pointer-events": "none" }, g);  // never steals bar clicks
+    const x45 = m.left + 0.5 * iw;
+    const xt = m.left + (thr / 90) * iw;
+    if (Math.abs(thr - 45) > 1e-9) {
+      el("line", {
+        x1: x45, y1: m.top, x2: x45, y2: m.top + ih,
+        stroke: css("--text-muted"), "stroke-width": 1.5, "stroke-dasharray": "5 4",
+      }, tg);
+      el("text", {
+        x: thr > 45 ? x45 - 5 : x45 + 5, y: m.top + 12, "font-size": 10, fill: css("--text-muted"),
+        "text-anchor": thr > 45 ? "end" : "start",
+      }, tg).textContent = "45°";
+    }
+    // the decision threshold
+    el("line", {
+      x1: xt, y1: m.top, x2: xt, y2: m.top + ih,
+      stroke: css("--text-secondary"), "stroke-width": 2,
+    }, tg);
+    el("text", {
+      x: thr > 45 ? xt + 5 : xt - 5, y: m.top + 26, "font-size": 10.5, "font-weight": 600,
+      fill: css("--text-secondary"), "text-anchor": thr > 45 ? "start" : "end",
+      "font-variant-numeric": "tabular-nums",
+      // halo in the card colour keeps the label readable over the bars
+      stroke: css("--surface-1"), "stroke-width": 4, "paint-order": "stroke",
+      "stroke-linejoin": "round",
+    }, tg).textContent = `${labels.threshold || "threshold"} ${labels.fmt ? labels.fmt(thr) : thr.toFixed(1)}°`;
+
     // marker for the user's own sample
     state = { meta, g, y, maxCount };
     drawMarker(marker);
   }
 
+  function setThreshold(v) {
+    thr = v;
+    if (state) draw(state.meta, lastMarker);
+  }
+
   let markerG = null;
   function drawMarker(deg) {
+    lastMarker = deg;
     if (markerG) { markerG.remove(); markerG = null; }
     if (deg === null || deg === undefined || !state) return;
     markerG = el("g", {}, svg);
@@ -614,7 +640,7 @@ export function createHistogram(host, { onBin = null, labels }) {
     }, lab).textContent = text;
   }
 
-  return { draw, setMarker: drawMarker };
+  return { draw, setMarker: drawMarker, setThreshold };
 }
 
 /* ======================================================================

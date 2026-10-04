@@ -219,6 +219,16 @@
         <label for="pair-select" data-i18n="play.pairLabel">Dataset pair</label>
         <select id="pair-select"></select>
       </div>
+      <div class="control">
+        <label for="tau-input" data-i18n="play.tauLabel">Decision threshold</label>
+        <div class="tau-row">
+          <input type="text" id="tau-input" value="45" inputmode="decimal" autocomplete="off"
+                 aria-describedby="tau-hint">
+          <span class="tau-unit">°</span>
+          <button type="button" class="btn-ghost" id="tau-reco"></button>
+          <button type="button" class="btn-ghost" id="tau-reset">45°</button>
+        </div>
+      </div>
       <div class="legend" style="padding-bottom:.5rem">
         <span class="legend-item"><span class="swatch a"></span><span id="legend-a">A</span></span>
         <span class="legend-item"><span class="swatch b"></span><span id="legend-b">B</span></span>
@@ -248,6 +258,8 @@
           <h3 style="margin-top:0;font-size:1rem" data-i18n="play.histTitle"></h3>
           <p class="note" data-i18n="play.histHint"></p>
           <div id="hist" style="margin-top:.8rem"></div>
+          <p class="tau-stats" id="tau-stats" aria-live="polite"></p>
+          <p class="note" id="tau-hint" data-i18n="play.tauHint"></p>
         </div>
 
         <div class="card" style="margin-top:1rem">

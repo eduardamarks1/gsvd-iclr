@@ -39,6 +39,7 @@ from gsvdlib.datasets import balanced_count, center, sample_pair
 OUT = Path(__file__).resolve().parent.parent / "data"
 N_A, N_B = 900, 800
 BASE_SEED, TEST_SEED = 1234, 4321
+N_VAL = 1000                # held-out training images per class for the threshold
 N_BINS = 45                 # 2-degree bins over [0, 90]
 MAX_SPRITE = 1200           # test images kept per side for the drill-down
 SPRITE_COLS = 40
@@ -72,6 +73,29 @@ def normalize_each(M: np.ndarray) -> np.ndarray:
     scale = np.percentile(np.abs(M), 99, axis=0, keepdims=True)
     scale = np.where(scale == 0, 1.0, scale)
     return np.clip(M / scale, -1.0, 1.0) * 0.5 + 0.5
+
+
+def recommended_threshold(ds, label_A, label_B, g, mu) -> tuple[float, float]:
+    """Decision threshold tuned on training images that are not in the base.
+
+    Replays the draw of ``sample_pair`` (same seed, same order) and takes the
+    next ``N_VAL`` images of each class, so the validation set is disjoint from
+    both the GSVD base and the test split. Returns the threshold with the best
+    balanced accuracy on it (middle of the best plateau, 0.1 degree grid) and
+    that accuracy.
+    """
+    rng = np.random.default_rng(BASE_SEED)
+    val = []
+    for label, n in ((label_A, N_A), (label_B, N_B)):
+        X = ds.get_class(label, split="train")
+        val.append(X[:, rng.permutation(X.shape[1])[n:n + N_VAL]])
+    tA = theta_angles(val[0] - mu[:, None], g.C, g.S, g.H)
+    tB = theta_angles(val[1] - mu[:, None], g.C, g.S, g.H)
+    grid = np.round(np.arange(0.0, 90.05, 0.1), 1)
+    bal = ((tA[None, :] < grid[:, None]).mean(axis=1)
+           + (tB[None, :] >= grid[:, None]).mean(axis=1)) / 2
+    best = np.flatnonzero(bal == bal.max())
+    return float(grid[best[len(best) // 2]]), float(bal.max())
 
 
 def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
@@ -114,6 +138,7 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
           f"of {ang_A.size + ang_B.size}")
 
     m = metrics_from_angles(ang_A, ang_B)
+    tau, tau_val_acc = recommended_threshold(ds, label_A, label_B, g, mu)
     cka = linear_cka(center(prep.A)[0], center(prep.B)[0])  # each set by its own mean
 
     # --- binary payload, base64 in JSON ------------------------------------
@@ -157,9 +182,12 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
         "transport_error_deg": round(float(err), 5),
         "transport_flips": flips,
         "centering": prep.centering,
+        "threshold": {"recommended": tau, "val_balanced_accuracy": round(tau_val_acc, 4),
+                      "n_val": N_VAL},
     }
     (OUT / f"{slug}.json").write_text(json.dumps(meta), encoding="utf-8")
-    print(f"    accuracy {m['accuracy']:.4f}  CKA {cka:.4f}  k={P.shape[0]}")
+    print(f"    accuracy {m['accuracy']:.4f}  CKA {cka:.4f}  k={P.shape[0]}  "
+          f"recommended threshold {tau:.1f} deg")
     return meta
 
 

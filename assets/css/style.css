@@ -357,6 +357,22 @@ select { min-width: 13rem; }
 
 input[type="range"] { width: 100%; accent-color: var(--series-b); }
 
+.tau-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+#tau-input {
+  font-family: var(--font-sans); font-size: 0.88rem; font-variant-numeric: tabular-nums;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  padding: 0.42rem 0.6rem; width: 4.6rem; text-align: right;
+}
+#tau-input[aria-invalid="true"] { border-color: var(--series-b); }
+#tau-input:focus-visible { outline: 2px solid var(--series-a); outline-offset: 1px; }
+.tau-unit { color: var(--text-muted); margin-left: -0.2rem; }
+.tau-row .btn-ghost[aria-pressed="true"] {
+  background: var(--surface-3); color: var(--text-primary); border-color: var(--border-strong);
+}
+.tau-stats { margin: 0.7rem 0 0.2rem; font-size: 0.9rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.tau-stats strong { color: var(--text-primary); }
+
 /* ---------- legend & table ---------- */
 
 .legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.85rem; color: var(--text-secondary); }
