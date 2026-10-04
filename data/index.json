@@ -7,7 +7,7 @@
   "cka": 0.1121,
   "label_A": 1,
   "label_B": 5,
-  "accuracy": 0.9439
+  "accuracy": 0.9456
  },
  {
   "slug": "mnist_0_7",
@@ -17,7 +17,7 @@
   "cka": 0.2226,
   "label_A": 0,
   "label_B": 7,
-  "accuracy": 0.9597
+  "accuracy": 0.9536
  },
  {
   "slug": "mnist_4_9",
@@ -27,7 +27,7 @@
   "cka": 0.7414,
   "label_A": 4,
   "label_B": 9,
-  "accuracy": 0.8951
+  "accuracy": 0.8905
  },
  {
   "slug": "mnist_3_9",
@@ -37,7 +37,7 @@
   "cka": 0.3072,
   "label_A": 3,
   "label_B": 9,
-  "accuracy": 0.9519
+  "accuracy": 0.9495
  },
  {
   "slug": "fashion_0_4",
@@ -47,7 +47,7 @@
   "cka": 0.6874,
   "label_A": 0,
   "label_B": 4,
-  "accuracy": 0.939
+  "accuracy": 0.9355
  },
  {
   "slug": "fashion_2_3",
@@ -57,7 +57,7 @@
   "cka": 0.7007,
   "label_A": 2,
   "label_B": 3,
-  "accuracy": 0.902
+  "accuracy": 0.9
  },
  {
   "slug": "fashion_7_9",
@@ -67,7 +67,7 @@
   "cka": 0.3207,
   "label_A": 7,
   "label_B": 9,
-  "accuracy": 0.941
+  "accuracy": 0.9435
  },
  {
   "slug": "fashion_0_7",
@@ -77,6 +77,6 @@
   "cka": 0.2942,
   "label_A": 0,
   "label_B": 7,
-  "accuracy": 0.9825
+  "accuracy": 0.9815
  }
 ]

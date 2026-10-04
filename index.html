@@ -396,13 +396,15 @@
 <pre class="bib code-snippet"><code>from gsvdlib import (MNISTDataset, prepare_data,
                      theta_angles)
 
-ds = MNISTDataset()
-g  = prepare_data(ds, 4, 9).gsvd   # frame, once
+ds   = MNISTDataset()
+prep = prepare_data(ds, 4, 9)       # frame, once
+g    = prep.gsvd
 
 Z = ds.get_class(4, "test")[:, :5]  # new samples
+Z = Z - prep.center_test[:, None]   # same frame as A, B
 theta_angles(Z, g.C, g.S, g.H)      # θ per column
 
-# -> [36.9 38.5 36.7 36.7 36.8]
+# -> [36.0 38.8 36.4 36.5 36.7]
 #    under 45°, so each reads as digit 4</code></pre>
         <p class="note" style="margin-top:1rem" data-i18n="code.wantMore"></p>
       </div>

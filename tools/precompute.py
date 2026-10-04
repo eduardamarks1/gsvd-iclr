@@ -4,15 +4,18 @@ Everything the site shows comes from `gsvdlib` (the validated pipeline), never
 from a second implementation. The decomposition runs here, offline; the browser
 only evaluates the cheap closed form
 
-    theta(z) = atan2( || s .* (P z) || , || c .* (P z) || ),   P = pinv(H')
+    theta(z) = atan2( || s .* (P z - m) || , || c .* (P z - m) || ),
+    P = pinv(H'),  m = P mu
 
-which is exact to ~1e-9 against `gsvdlib.classify.theta_angles` and to ~0.005
-degrees after the float16 quantization of P used for transport.
+where mu is the pooled mean of the training columns of A and B (gsvdlib's
+default centering: A, B and every new sample z share one frame). This is exact
+to ~1e-9 against `gsvdlib.classify.theta_angles` on z - mu, up to the float16
+quantization of P used for transport (reported per pair as transport error).
 
 Per pair we emit:
   <slug>.op.json  {"data": base64 of float16 P (k x 784), then float32 c,
-                  then float32 s}; base64 because corporate proxies often
-                  block raw binary downloads
+                  then float32 s, then float32 m = P16 mu}; base64 because
+                  corporate proxies often block raw binary downloads
   <slug>.json   metrics, histograms, per-test-sample angles, sprite layout
   <slug>_test.png     sprite with the test images (row-major, 28x28 cells)
   <slug>_H.png        sprite with the reconstructed H directions
@@ -31,7 +34,7 @@ from gsvdlib import FashionMNISTDataset, MNISTDataset, prepare_data
 from gsvdlib.angles import get_nonzero_per_column
 from gsvdlib.blocks import to_intersection
 from gsvdlib.classify import linear_cka, metrics_from_angles, theta_angles
-from gsvdlib.datasets import balanced_count, sample_pair
+from gsvdlib.datasets import balanced_count, center, sample_pair
 
 OUT = Path(__file__).resolve().parent.parent / "data"
 N_A, N_B = 900, 800
@@ -73,8 +76,10 @@ def normalize_each(M: np.ndarray) -> np.ndarray:
 
 def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
     print(f"  {slug}: decomposing...", flush=True)
-    prep = prepare_data(ds, label_A, label_B, n_A=N_A, n_B=N_B, seed=BASE_SEED)
+    prep = prepare_data(ds, label_A, label_B, n_A=N_A, n_B=N_B, seed=BASE_SEED,
+                        centering="pooled")
     g = prep.gsvd
+    mu = prep.center_test
 
     # --- the compact operator the browser will use -------------------------
     Ci, Si = to_intersection(g.C, g.S)
@@ -88,14 +93,16 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
     n_test = balanced_count(ds, label_A, label_B, split="test")
     X_A, X_B = sample_pair(ds, label_A, label_B, n_test, n_test,
                            split="test", seed=TEST_SEED)
-    ang_A = theta_angles(X_A, g.C, g.S, g.H)
-    ang_B = theta_angles(X_B, g.C, g.S, g.H)
+    ang_A = theta_angles(X_A - mu[:, None], g.C, g.S, g.H)
+    ang_B = theta_angles(X_B - mu[:, None], g.C, g.S, g.H)
 
-    # the float16 round trip the browser will see
+    # the float16 round trip the browser will see; z is raw, the mean is
+    # removed in coordinate space through m = P16 mu
     P16 = P.astype(np.float16)
+    m_shift = (P16.astype(np.float64) @ mu).astype(np.float32)
 
     def theta_fast(X):
-        c = P16.astype(np.float64) @ X
+        c = P16.astype(np.float64) @ X - m_shift.astype(np.float64)[:, None]
         return np.degrees(np.arctan2(np.linalg.norm(sv[:, None] * c, axis=0),
                                      np.linalg.norm(cv[:, None] * c, axis=0)))
 
@@ -107,11 +114,11 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
           f"of {ang_A.size + ang_B.size}")
 
     m = metrics_from_angles(ang_A, ang_B)
-    cka = linear_cka(prep.A, prep.B)
+    cka = linear_cka(center(prep.A)[0], center(prep.B)[0])  # each set by its own mean
 
     # --- binary payload, base64 in JSON ------------------------------------
     payload = (P16.tobytes() + cv.astype(np.float32).tobytes()
-               + sv.astype(np.float32).tobytes())
+               + sv.astype(np.float32).tobytes() + m_shift.tobytes())
     (OUT / f"{slug}.op.json").write_text(
         json.dumps({"data": base64.b64encode(payload).decode("ascii")}))
 
@@ -149,6 +156,7 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
         "angles_H": [round(float(a), 3) for a in ang_H[order]],
         "transport_error_deg": round(float(err), 5),
         "transport_flips": flips,
+        "centering": prep.centering,
     }
     (OUT / f"{slug}.json").write_text(json.dumps(meta), encoding="utf-8")
     print(f"    accuracy {m['accuracy']:.4f}  CKA {cka:.4f}  k={P.shape[0]}")

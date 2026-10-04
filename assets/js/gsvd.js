@@ -4,12 +4,14 @@
    validated `gsvdlib` pipeline. What ships here is the operator
 
        P = pinv(H')   (k x d, float16)   plus the cosine/sine vectors c, s
+       m = P mu       (k, float32)       mu = pooled mean of the training columns
 
    and the only thing this file computes is the closed form
 
-       theta(z) = atan2( || s .* (P z) || , || c .* (P z) || )
+       theta(z) = atan2( || s .* (P z - m) || , || c .* (P z - m) || )
 
-   which matches gsvdlib's own angles to within 0.02 degrees. */
+   i.e. theta of z - mu: the raw drawing is centered in the same frame as
+   A and B. Each pair's json reports the float16 transport error. */
 
 const DATA = "data/";
 
@@ -90,7 +92,11 @@ export async function loadOperator(slug, meta) {
       const off = k * d * 2;
       const c = new Float32Array(buf.slice(off, off + k * 4));
       const s = new Float32Array(buf.slice(off + k * 4, off + k * 8));
-      return { P, c, s, k, d };
+      // operators built before pooled centering carry no shift
+      const m = buf.byteLength >= off + k * 12
+        ? new Float32Array(buf.slice(off + k * 8, off + k * 12))
+        : new Float32Array(k);
+      return { P, c, s, m, k, d };
     })());
   }
   return cache.get(key);
@@ -114,11 +120,11 @@ export const spriteURL = (slug, which) => `${DATA}${slug}_${which}.png`;
  * @param {Float32Array} z  length d, pixel values in [0, 1]
  */
 export function theta(op, z) {
-  const { P, c, s, k, d } = op;
+  const { P, c, s, m, k, d } = op;
   let sumA = 0, sumB = 0;
   for (let i = 0; i < k; i++) {
     const row = i * d;
-    let ci = 0;
+    let ci = -m[i];
     for (let j = 0; j < d; j++) ci += P[row + j] * z[j];
     const a = c[i] * ci, b = s[i] * ci;
     sumA += a * a;

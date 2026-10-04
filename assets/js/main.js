@@ -7,15 +7,14 @@ import {
   drawBlocks, drawScatter,
 } from "./viz.js";
 
-/* Published MNIST numbers, transcribed from the paper's metrics table.
-   The playground recomputes its own from a fresh random draw; these are the
-   ones to cite. */
-const PUBLISHED = [
-  { pair: "1 vs 5", accuracy: 0.9608, cka: 0.1147, f1a: 0.9597, f1b: 0.9618 },
-  { pair: "0 vs 7", accuracy: 0.9719, cka: 0.2184, f1a: 0.9725, f1b: 0.9714 },
-  { pair: "3 vs 9", accuracy: 0.9604, cka: 0.3355, f1a: 0.9614, f1b: 0.9592 },
-  { pair: "4 vs 9", accuracy: 0.8987, cka: 0.7402, f1a: 0.9056, f1b: 0.8906 },
+/* MNIST pairs shown in the results table. Their numbers are read from the
+   generated data/<slug>.json (tools/precompute.py, pooled centering), so the
+   table always matches the playground. */
+const RESULT_PAIRS = [
+  ["1 vs 5", "mnist_1_5"], ["0 vs 7", "mnist_0_7"],
+  ["3 vs 9", "mnist_3_9"], ["4 vs 9", "mnist_4_9"],
 ];
+let resultRows = null;
 
 let lang = detectLang();
 const state = { slug: null, meta: null, op: null, testSprite: null };
@@ -469,10 +468,17 @@ async function initPlayground() {
 
 /* ============================ static results ========================= */
 
-function renderResults() {
+async function renderResults() {
+  if (!resultRows) {
+    resultRows = await Promise.all(RESULT_PAIRS.map(async ([pair, slug]) => {
+      const m = await loadMeta(slug);
+      return { pair, accuracy: m.metrics.accuracy, cka: m.cka,
+               f1a: m.metrics.f1_A, f1b: m.metrics.f1_B };
+    }));
+  }
   const tbody = document.querySelector("#results-table tbody");
   clear(tbody);
-  PUBLISHED.forEach((r) => {
+  resultRows.forEach((r) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${r.pair}</td>`
       + `<td class="hi">${(r.accuracy * 100).toFixed(2)}%</td>`
@@ -482,7 +488,7 @@ function renderResults() {
     tbody.appendChild(tr);
   });
   drawScatter(document.getElementById("scatter"),
-    PUBLISHED.map((r) => ({ label: r.pair, cka: r.cka, accuracy: r.accuracy })),
+    resultRows.map((r) => ({ label: r.pair, cka: r.cka, accuracy: r.accuracy })),
     { x: t("results.axisCka", lang), y: t("results.axisAcc", lang) });
 }
 
