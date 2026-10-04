@@ -5,10 +5,11 @@ from a second implementation. The decomposition runs here, offline; the browser
 only evaluates the cheap closed form
 
     theta(z) = atan2( || s .* (P z - m) || , || c .* (P z - m) || ),
-    P = pinv(H'),  m = P mu
+    P = pinv(H', rcond),  m = P mu
 
 where mu is the pooled mean of the training columns of A and B (gsvdlib's
-default centering: A, B and every new sample z share one frame). This is exact
+default centering: A, B and every new sample z share one frame) and the
+pseudo-inverse is truncated at gsvdlib's DEFAULT_RCOND, as theta_angles does. This is exact
 to ~1e-9 against `gsvdlib.classify.theta_angles` on z - mu, up to the float16
 quantization of P used for transport (reported per pair as transport error).
 
@@ -19,6 +20,12 @@ Per pair we emit:
   <slug>.json   metrics, histograms, per-test-sample angles, sprite layout
   <slug>_test.png     sprite with the test images (row-major, 28x28 cells)
   <slug>_H.png        sprite with the reconstructed H directions
+
+plus, for the "how many directions" section (one pair, MNIST 4 vs 9):
+  truncation.json      singular values of H, metrics per truncation level,
+                       validation AUC per level (mean over all 8 pairs) and
+                       the closed-top 4 example
+  truncation_dirs.png  sprite with the singular directions of H, strongest first
 """
 
 from __future__ import annotations
@@ -28,12 +35,12 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from gsvdlib import FashionMNISTDataset, MNISTDataset, prepare_data
 from gsvdlib.angles import get_nonzero_per_column
 from gsvdlib.blocks import to_intersection
-from gsvdlib.classify import linear_cka, metrics_from_angles, theta_angles
+from gsvdlib.classify import DEFAULT_RCOND, linear_cka, metrics_from_angles, theta_angles
 from gsvdlib.datasets import balanced_count, center, sample_pair
 
 OUT = Path(__file__).resolve().parent.parent / "data"
@@ -43,6 +50,11 @@ N_VAL = 1000                # held-out training images per class for the thresho
 N_BINS = 45                 # 2-degree bins over [0, 90]
 MAX_SPRITE = 1200           # test images kept per side for the drill-down
 SPRITE_COLS = 40
+
+# truncation levels shown in the "how many directions" section (fraction of s_max)
+TRUNC_GRID = (0.0, 1e-4, 1e-3, 1e-2, 3e-2, 5e-2, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5)
+TRUNC_PAIR = ("mnist", 4, 9)
+TRUNC_EXAMPLES = (1, 2, 4)  # test 4s whose open top is closed in the example
 
 MNIST_PAIRS = [(1, 5), (0, 7), (4, 9), (3, 9)]
 FASHION_PAIRS = [(0, 4), (2, 3), (7, 9), (0, 7)]
@@ -75,20 +87,79 @@ def normalize_each(M: np.ndarray) -> np.ndarray:
     return np.clip(M / scale, -1.0, 1.0) * 0.5 + 0.5
 
 
-def recommended_threshold(ds, label_A, label_B, g, mu) -> tuple[float, float]:
-    """Decision threshold tuned on training images that are not in the base.
+def validation_split(ds, label_A, label_B):
+    """Training images that are in neither the GSVD base nor the test split.
 
     Replays the draw of ``sample_pair`` (same seed, same order) and takes the
-    next ``N_VAL`` images of each class, so the validation set is disjoint from
-    both the GSVD base and the test split. Returns the threshold with the best
-    balanced accuracy on it (middle of the best plateau, 0.1 degree grid) and
-    that accuracy.
+    next ``N_VAL`` images of each class.
     """
     rng = np.random.default_rng(BASE_SEED)
     val = []
     for label, n in ((label_A, N_A), (label_B, N_B)):
         X = ds.get_class(label, split="train")
         val.append(X[:, rng.permutation(X.shape[1])[n:n + N_VAL]])
+    return val
+
+
+def auc(t_a, t_b) -> float:
+    """P(theta_B > theta_A), ties counted half."""
+    return float((t_b[:, None] > t_a[None]).mean() + 0.5 * (t_b[:, None] == t_a[None]).mean())
+
+
+class TruncatedTheta:
+    """theta(z) for any truncation level, from one SVD of H^T."""
+
+    def __init__(self, g, mu):
+        self.U, self.s, self.Vt = np.linalg.svd(g.H.T, full_matrices=False)
+        self.Ci, self.Si = to_intersection(g.C, g.S)
+        self.mu = mu[:, None]
+
+    def keep(self, rcond):
+        return self.s > (rcond * self.s[0] if rcond > 0 else 0.0)
+
+    def coeffs(self, X, rcond):
+        k = self.keep(rcond)
+        return self.Vt[k].T @ ((self.U[:, k].T @ (X - self.mu)) / self.s[k, None])
+
+    def __call__(self, X, rcond):
+        c = self.coeffs(X, rcond)
+        return np.degrees(np.arctan2(np.linalg.norm(self.Si @ c, axis=0),
+                                     np.linalg.norm(self.Ci @ c, axis=0)))
+
+
+def close_top(img: np.ndarray):
+    """Close the open top of a 4 the way a user would on the 280 px pad:
+    one stroke (the pad's brush) from the top of the left arm, over the top,
+    to the top of the right arm. Returns the 28x28 result, or None if the
+    digit has no two open arms."""
+    m = img.sum()
+    cx = (img.sum(axis=0) * np.arange(28)).sum() / m
+
+    def top(left):
+        for y in range(28):
+            for x in range(28):
+                if img[y, x] > 0.5 and (x < cx - 2 if left else x > cx + 2):
+                    return x, y
+        return None
+
+    L, R = top(True), top(False)
+    if L is None or R is None or abs(L[1] - R[1]) > 8:
+        return None
+    big = Image.fromarray((img * 255).astype(np.uint8)).resize((280, 280), Image.NEAREST)
+    pts = [(L[0] * 10 + 5, L[1] * 10 + 5), ((L[0] + R[0]) * 5 + 5, min(L[1], R[1]) * 10 - 25),
+           (R[0] * 10 + 5, R[1] * 10 + 5)]
+    draw = ImageDraw.Draw(big)
+    draw.line(pts, fill=255, width=28, joint="curve")
+    for q in (pts[0], pts[-1]):
+        draw.ellipse((q[0] - 14, q[1] - 14, q[0] + 14, q[1] + 14), fill=255)
+    return (np.asarray(big, float) / 255).reshape(28, 10, 28, 10).mean(axis=(1, 3))
+
+
+def recommended_threshold(ds, label_A, label_B, g, mu) -> tuple[float, float]:
+    """Decision threshold tuned on the validation images (see
+    ``validation_split``): the best balanced accuracy on them (middle of the
+    best plateau, 0.1 degree grid) and that accuracy."""
+    val = validation_split(ds, label_A, label_B)
     tA = theta_angles(val[0] - mu[:, None], g.C, g.S, g.H)
     tB = theta_angles(val[1] - mu[:, None], g.C, g.S, g.H)
     grid = np.round(np.arange(0.0, 90.05, 0.1), 1)
@@ -96,6 +167,52 @@ def recommended_threshold(ds, label_A, label_B, g, mu) -> tuple[float, float]:
            + (tB[None, :] >= grid[:, None]).mean(axis=1)) / 2
     best = np.flatnonzero(bal == bal.max())
     return float(grid[best[len(best) // 2]]), float(bal.max())
+
+
+TRUNC_STATE: dict = {}
+
+
+def truncation_section(tt: TruncatedTheta, X_A, X_B, hist_edges) -> dict:
+    """Everything the truncation section shows for one pair, except the
+    validation curve (averaged over all pairs in main)."""
+    s = tt.s[tt.s > 0]
+    energy = np.cumsum(s ** 2) / np.sum(s ** 2)
+    levels = []
+    for r in TRUNC_GRID:
+        k = int(tt.keep(r).sum())
+        tA, tB = tt(X_A, r), tt(X_B, r)
+        levels.append({
+            "rcond": r, "kept": k, "energy": round(float(energy[k - 1]), 4),
+            "hist_A": np.histogram(tA, bins=hist_edges)[0].tolist(),
+            "hist_B": np.histogram(tB, bins=hist_edges)[0].tolist(),
+            "test_auc": round(auc(tA, tB), 4),
+            "test_acc45": round(float(((tA < 45).mean() + (tB >= 45).mean()) / 2), 4),
+        })
+
+    # singular directions as images, strongest first
+    layout = sprite(normalize_each(tt.U[:, :s.size]), OUT / "truncation_dirs.png", cols=25)
+
+    # the closed-top 4: theta and |c| without and with the default cut
+    examples = []
+    for i in TRUNC_EXAMPLES:
+        orig = X_A[:, i].reshape(28, 28)
+        closed = close_top(orig)
+        z = np.stack([orig.ravel(), closed.ravel()], axis=1)
+        th0, th1 = tt(z, 0.0), tt(z, DEFAULT_RCOND)
+        n0 = np.linalg.norm(tt.coeffs(z, 0.0), axis=0)
+        n1 = np.linalg.norm(tt.coeffs(z, DEFAULT_RCOND), axis=0)
+        examples.append({
+            "orig": np.round(orig.ravel() * 255).astype(int).tolist(),
+            "closed": np.round(closed.ravel() * 255).astype(int).tolist(),
+            "theta_plain": [round(float(v), 2) for v in th0],
+            "theta_cut": [round(float(v), 2) for v in th1],
+            "norm_plain": [round(float(v), 2) for v in n0],
+            "norm_cut": [round(float(v), 3) for v in n1],
+        })
+    print(f"    truncation section: {s.size} directions, default keeps "
+          f"{int(tt.keep(DEFAULT_RCOND).sum())}")
+    return {"sigma": [float(f"{v:.4g}") for v in s], "levels": levels,
+            "sprite_dirs": layout, "examples": examples, "hist_edges": hist_edges.tolist()}
 
 
 def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
@@ -110,7 +227,7 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
     cv = get_nonzero_per_column(Ci)
     sv = get_nonzero_per_column(Si)
     keep = np.flatnonzero((cv != 0) | (sv != 0))
-    P = np.linalg.pinv(g.H.T)[keep]
+    P = np.linalg.pinv(g.H.T, rcond=DEFAULT_RCOND)[keep]
     cv, sv = cv[keep], sv[keep]
 
     # --- test set, exactly as evaluate_pair does it ------------------------
@@ -139,6 +256,11 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
 
     m = metrics_from_angles(ang_A, ang_B)
     tau, tau_val_acc = recommended_threshold(ds, label_A, label_B, g, mu)
+
+    # validation AUC at every truncation level (feeds the truncation section)
+    tt = TruncatedTheta(g, mu)
+    VA, VB = validation_split(ds, label_A, label_B)
+    val_auc = [auc(tt(VA, r), tt(VB, r)) for r in TRUNC_GRID]
     cka = linear_cka(center(prep.A)[0], center(prep.B)[0])  # each set by its own mean
 
     # --- binary payload, base64 in JSON ------------------------------------
@@ -182,9 +304,13 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
         "transport_error_deg": round(float(err), 5),
         "transport_flips": flips,
         "centering": prep.centering,
+        "rcond": DEFAULT_RCOND,
         "threshold": {"recommended": tau, "val_balanced_accuracy": round(tau_val_acc, 4),
                       "n_val": N_VAL},
+        "val_auc_by_rcond": [round(v, 5) for v in val_auc],
     }
+    if (family, label_A, label_B) == TRUNC_PAIR:
+        TRUNC_STATE.update(truncation_section(tt, X_A, X_B, hist_edges))
     (OUT / f"{slug}.json").write_text(json.dumps(meta), encoding="utf-8")
     print(f"    accuracy {m['accuracy']:.4f}  CKA {cka:.4f}  k={P.shape[0]}  "
           f"recommended threshold {tau:.1f} deg")
@@ -193,7 +319,7 @@ def run_pair(ds, label_A, label_B, slug: str, family: str) -> dict:
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    index = []
+    index, metas = [], []
     for family, ds, pairs in (
         ("mnist", MNISTDataset(), MNIST_PAIRS),
         ("fashion", FashionMNISTDataset(), FASHION_PAIRS),
@@ -202,11 +328,20 @@ def main():
         for a, b in pairs:
             slug = f"{family}_{a}_{b}"
             meta = run_pair(ds, a, b, slug, family)
+            metas.append(meta)
             index.append({k: meta[k] for k in
                           ("slug", "family", "name_A", "name_B", "cka",
                            "label_A", "label_B")}
                          | {"accuracy": meta["metrics"]["accuracy"]})
     (OUT / "index.json").write_text(json.dumps(index, indent=1), encoding="utf-8")
+
+    # validation AUC per truncation level, mean over every pair above
+    curves = np.array([m["val_auc_by_rcond"] for m in metas])
+    fam, a, b = TRUNC_PAIR
+    trunc = {"pair": f"{fam}_{a}_{b}", "grid": list(TRUNC_GRID), "chosen": DEFAULT_RCOND,
+             "val_auc_mean": [round(float(v), 5) for v in curves.mean(axis=0)],
+             "n_pairs": len(metas), **TRUNC_STATE}
+    (OUT / "truncation.json").write_text(json.dumps(trunc), encoding="utf-8")
     print(f"\nwrote {len(index)} pairs to {OUT}")
 
 

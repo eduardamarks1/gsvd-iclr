@@ -480,3 +480,31 @@ pre.bib {
 .skip-link:focus { left: 0.5rem; top: 0.5rem; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- truncation section ---------- */
+
+.lede-narrow { max-width: 46rem; }
+.trunc-examples {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 0.9rem;
+}
+@media (max-width: 760px) { .trunc-examples { grid-template-columns: 1fr; } }
+.trunc-ex { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.trunc-ex-imgs { display: flex; gap: 0.5rem; align-items: center; }
+.trunc-ex-imgs figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.trunc-ex-imgs canvas { width: 84px; height: 84px; image-rendering: pixelated; border-radius: 6px; background: #000; }
+.trunc-ex-imgs figcaption { font-size: 0.72rem; color: var(--text-muted); }
+.trunc-ex table { border-collapse: collapse; font-size: 0.8rem; font-variant-numeric: tabular-nums; width: 100%; }
+.trunc-ex th, .trunc-ex td { padding: 0.18rem 0.35rem; text-align: right; border-bottom: 1px solid var(--border); }
+.trunc-ex th:first-child, .trunc-ex td:first-child { text-align: left; color: var(--text-secondary); font-weight: 400; }
+.trunc-ex th { color: var(--text-muted); font-weight: 600; }
+.trunc-ex td.hot { color: var(--series-b); font-weight: 600; }
+.trunc-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1.4rem; align-items: flex-end; }
+.trunc-readout { margin: 0; font-size: 0.92rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.trunc-readout strong { color: var(--text-primary); }
+.trunc-strips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 0.8rem; }
+@media (max-width: 760px) { .trunc-strips { grid-template-columns: 1fr; } }
+.trunc-strip { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.4rem; }
+.trunc-strip figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+.trunc-strip canvas { width: 56px; height: 56px; image-rendering: pixelated; border-radius: 4px; }
+.trunc-strip figcaption { font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.trunc-strip .gap { align-self: center; color: var(--text-muted); padding: 0 0.2rem; }

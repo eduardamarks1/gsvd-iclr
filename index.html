@@ -25,6 +25,7 @@
       <a href="#machine" data-i18n="nav.machine">The machine</a>
       <a href="#play" data-i18n="nav.play">Playground</a>
       <a href="#results" data-i18n="nav.results">Results</a>
+      <a href="#truncation" data-i18n="nav.trunc">Truncation</a>
       <a href="#geometry" data-i18n="nav.geometry">Why 45° matters</a>
       <a href="#next" data-i18n="nav.next">What's next</a>
       <a href="#code" data-i18n="nav.code">Code</a>
@@ -310,6 +311,65 @@
   </div>
 </section>
 
+<!-- ========================= TRUNCATION ========================== -->
+
+<section id="truncation">
+  <div class="wrap">
+    <p class="eyebrow" data-i18n="trunc.eyebrow">How many directions</p>
+    <h2 data-i18n="trunc.title"></h2>
+    <p class="lede-narrow" data-i18n="trunc.p1"></p>
+
+    <div class="card" style="margin-top:1.4rem">
+      <h3 style="margin-top:0;font-size:1rem" data-i18n="trunc.exTitle"></h3>
+      <p class="note" data-i18n="trunc.exHint"></p>
+      <div class="trunc-examples" id="trunc-examples"></div>
+    </div>
+
+    <p class="lede-narrow" style="margin-top:2rem" data-i18n="trunc.p2"></p>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="trunc-controls">
+        <div class="control" style="flex:1 1 16rem">
+          <label for="trunc-slider" data-i18n="trunc.sliderLabel">Cut</label>
+          <input type="range" id="trunc-slider" min="0" max="11" step="1" value="5">
+        </div>
+        <p class="trunc-readout" id="trunc-readout" aria-live="polite"></p>
+      </div>
+      <h3 style="font-size:1rem;margin:1rem 0 .4rem" data-i18n="trunc.spectrumTitle"></h3>
+      <div id="trunc-spectrum"></div>
+      <div class="trunc-strips">
+        <div>
+          <p class="note" data-i18n="trunc.keptStrip"></p>
+          <div class="trunc-strip" id="trunc-kept"></div>
+        </div>
+        <div>
+          <p class="note" data-i18n="trunc.droppedStrip"></p>
+          <div class="trunc-strip" id="trunc-dropped"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:1rem;gap:1rem;align-items:start">
+      <div class="card">
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="trunc.aucTitle"></h3>
+        <div id="trunc-auc"></div>
+        <p class="figure-caption" data-i18n="trunc.aucCaption"></p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0;font-size:1rem" data-i18n="trunc.histTitle"></h3>
+        <div id="trunc-hist"></div>
+        <p class="tau-stats" id="trunc-hist-stats"></p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2.2rem" data-i18n="trunc.drTitle"></h3>
+    <p class="lede-narrow" id="trunc-dr1"></p>
+    <p class="lede-narrow" data-i18n="trunc.dr2"></p>
+    <p class="lede-narrow" data-i18n="trunc.dr3"></p>
+    <p class="note" data-i18n="trunc.paperNote"></p>
+  </div>
+</section>
+
 <!-- ========================= GEOMETRY ============================ -->
 <section id="geometry">
   <div class="wrap">
@@ -416,7 +476,7 @@ Z = ds.get_class(4, "test")[:, :5]  # new samples
 Z = Z - prep.center_test[:, None]   # same frame as A, B
 theta_angles(Z, g.C, g.S, g.H)      # θ per column
 
-# -> [36.0 38.8 36.4 36.5 36.7]
+# -> [38.8 40.6 37.9 37.0 35.9]
 #    under 45°, so each reads as digit 4</code></pre>
         <p class="note" style="margin-top:1rem" data-i18n="code.wantMore"></p>
       </div>

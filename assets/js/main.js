@@ -4,7 +4,7 @@ import {
 } from "./gsvd.js";
 import {
   angleColor, clear, createCospan, createDial, createHistogram,
-  drawBlocks, drawScatter,
+  drawBlocks, drawLevelCurve, drawScatter, drawSpectrum,
 } from "./viz.js";
 
 /* MNIST pairs shown in the results table. Their numbers are read from the
@@ -214,8 +214,12 @@ function renderHSlider() {
 /* ========================= drawing pad =============================== */
 
 const PAD = 280;
+/* Brush width on the 280 px pad. A digit drawn ~200 px tall is scaled by
+   0.1, so this gives ~2.8 px strokes, close to MNIST's. */
+const BRUSH = 28;
 let padCtx = null;
 let padDirty = false;
+let padFromSample = false;   // the pad holds a loaded test sample (see padToVector)
 
 function initPad() {
   const canvas = document.getElementById("draw-pad");
@@ -261,18 +265,43 @@ function initPad() {
 }
 
 function clearPad() {
+  padFromSample = false;
   padCtx.fillStyle = "#000";
   padCtx.fillRect(0, 0, PAD, PAD);
   padCtx.strokeStyle = "#fff";
-  padCtx.lineWidth = 22;
+  padCtx.lineWidth = BRUSH;
   padCtx.lineCap = "round";
   padCtx.lineJoin = "round";
 }
 
-/** Downsample the pad to a 28x28 MNIST-style vector: crop to the ink, scale
-    the longest side to 20 px, and centre by centre of mass. */
+/** Pad -> 28x28 vector.
+
+    A test sample loaded into the pad is already MNIST-normalised and was
+    drawn as 10x10 blocks, so it is read back by averaging each block: the
+    untouched sample gives back its exact pixels, and strokes added on top
+    stay where they were drawn.
+
+    A free drawing is normalised the way MNIST was built: crop to the ink,
+    scale the longest side to 20 px with an area average (plain canvas
+    downscaling skips pixels and breaks thin strokes), paste into 28x28 and
+    shift the centre of mass to the middle. */
 function padToVector() {
   const src = padCtx.getImageData(0, 0, PAD, PAD).data;
+  const at = (x, y) => src[(y * PAD + x) * 4] / 255;
+  const BLOCK = PAD / 28;
+
+  if (padFromSample) {
+    const out = new Float32Array(784);
+    for (let y = 0; y < 28; y++) {
+      for (let x = 0; x < 28; x++) {
+        let sum = 0;
+        for (let v = 0; v < BLOCK; v++) for (let u = 0; u < BLOCK; u++) sum += at(x * BLOCK + u, y * BLOCK + v);
+        out[y * 28 + x] = sum / (BLOCK * BLOCK);
+      }
+    }
+    return out;
+  }
+
   let minX = PAD, minY = PAD, maxX = -1, maxY = -1;
   for (let y = 0; y < PAD; y++) {
     for (let x = 0; x < PAD; x++) {
@@ -288,19 +317,30 @@ function padToVector() {
   const scale = 20 / Math.max(bw, bh);
   const tw = Math.max(1, Math.round(bw * scale)), th = Math.max(1, Math.round(bh * scale));
 
-  const tmp = document.createElement("canvas");
-  tmp.width = 28; tmp.height = 28;
-  const tctx = tmp.getContext("2d", { willReadFrequently: true });
-  tctx.fillStyle = "#000"; tctx.fillRect(0, 0, 28, 28);
-  tctx.drawImage(padCtx.canvas, minX, minY, bw, bh,
-                 (28 - tw) / 2, (28 - th) / 2, tw, th);
+  // area average: each target pixel is the mean of an 8x8 grid of samples
+  // spread over the source box it covers
+  const SS = 8;
+  const img = new Float32Array(784);
+  const ox = Math.floor((28 - tw) / 2), oy = Math.floor((28 - th) / 2);
+  for (let ty = 0; ty < th; ty++) {
+    for (let tx = 0; tx < tw; tx++) {
+      let sum = 0;
+      for (let v = 0; v < SS; v++) {
+        const sy = Math.min(maxY, Math.floor(minY + (ty + (v + 0.5) / SS) * bh / th));
+        for (let u = 0; u < SS; u++) {
+          const sx = Math.min(maxX, Math.floor(minX + (tx + (u + 0.5) / SS) * bw / tw));
+          sum += at(sx, sy);
+        }
+      }
+      img[(oy + ty) * 28 + ox + tx] = sum / (SS * SS);
+    }
+  }
 
   // centre of mass shift, as MNIST does
-  const d = tctx.getImageData(0, 0, 28, 28).data;
   let m = 0, mx = 0, my = 0;
   for (let y = 0; y < 28; y++) {
     for (let x = 0; x < 28; x++) {
-      const v = d[(y * 28 + x) * 4] / 255;
+      const v = img[y * 28 + x];
       m += v; mx += v * x; my += v * y;
     }
   }
@@ -312,7 +352,7 @@ function padToVector() {
     for (let x = 0; x < 28; x++) {
       const sx = x - dx, sy = y - dy;
       if (sx < 0 || sx > 27 || sy < 0 || sy > 27) continue;
-      out[y * 28 + x] = d[(sy * 28 + sx) * 4] / 255;
+      out[y * 28 + x] = img[sy * 28 + sx];
     }
   }
   return out;
@@ -359,9 +399,10 @@ function drawSpriteToPad(i) {
   padCtx.drawImage(testSprite, c * cell, r * cell, cell, cell, 0, 0, PAD, PAD);
   padCtx.imageSmoothingEnabled = true;
   padCtx.strokeStyle = "#fff";
-  padCtx.lineWidth = 22;
+  padCtx.lineWidth = BRUSH;
   padCtx.lineCap = "round";
   padCtx.lineJoin = "round";
+  padFromSample = true;
   padDirty = true;
   scoreDrawing();
 }
@@ -571,6 +612,198 @@ async function renderResults() {
     { x: t("results.axisCka", lang), y: t("results.axisAcc", lang) });
 }
 
+/* ======================== truncation section ========================= */
+
+/* Everything here comes from data/truncation.json (tools/precompute.py):
+   singular values of H for one pair, test histograms and metrics at each
+   truncation level, and the mean validation AUC over all pairs. */
+const trunc = { data: null, sprite: null, level: 0 };
+
+const fmtNum = (v, d) => {
+  const s = v.toFixed(d);
+  return lang === "pt" ? s.replace(".", ",") : s;
+};
+const fill = (tpl, vals) => tpl.replace(/\{(\w+)\}/g, (_, k) => vals[k]);
+const pct0 = (x) => `${Math.round(x * 100)}%`;
+/* singular values span 1e2..1e-4: one decimal above 1, one significant digit below */
+const fmtSigma = (v) => {
+  const s = v >= 1 ? v.toFixed(1) : String(+v.toPrecision(1));
+  return lang === "pt" ? s.replace(".", ",") : s;
+};
+
+function levelLabel(r) {
+  if (r === 0) return t("trunc.noCut", lang);
+  const p = r * 100;
+  const s = p >= 1 ? String(Math.round(p)) : String(+p.toPrecision(1));
+  return (lang === "pt" ? s.replace(".", ",") : s) + "%";
+}
+
+/** A 28x28 grayscale image (values 0..255) into a canvas. */
+function paintDigit(canvas, px) {
+  canvas.width = 28; canvas.height = 28;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(28, 28);
+  px.forEach((v, i) => { img.data.set([v, v, v, 255], i * 4); });
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Singular direction i (0-based) from the sprite into a canvas. */
+function paintDirection(canvas, i) {
+  const { cols, cell } = trunc.data.sprite_dirs;
+  canvas.width = cell; canvas.height = cell;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(trunc.sprite, (i % cols) * cell, Math.floor(i / cols) * cell, cell, cell, 0, 0, cell, cell);
+}
+
+function renderTruncExamples() {
+  const host = document.getElementById("trunc-examples");
+  clear(host);
+  trunc.data.examples.forEach((ex) => {
+    const box = document.createElement("div");
+    box.className = "trunc-ex";
+    const imgs = document.createElement("div");
+    imgs.className = "trunc-ex-imgs";
+    [["orig", "trunc.exOrig"], ["closed", "trunc.exClosed"]].forEach(([key, label]) => {
+      const fig = document.createElement("figure");
+      const c = document.createElement("canvas");
+      paintDigit(c, ex[key]);
+      const cap = document.createElement("figcaption");
+      cap.textContent = t(label, lang);
+      fig.append(c, cap);
+      imgs.appendChild(fig);
+    });
+    const row = (label, vals, digits, unit, hot) =>
+      `<tr><td>${t(label, lang)}</td>${vals.map((v, j) =>
+        `<td class="${hot && j === 1 ? "hot" : ""}">${fmtNum(v, digits)}${unit}</td>`).join("")}</tr>`;
+    const table = document.createElement("table");
+    table.innerHTML =
+      `<thead><tr><th></th><th>${t("trunc.exOrig", lang)}</th><th>${t("trunc.exClosed", lang)}</th></tr></thead>`
+      + `<tbody>${row("trunc.exThetaPlain", ex.theta_plain, 1, "°", false)}`
+      + `${row("trunc.exThetaCut", ex.theta_cut, 1, "°", false)}`
+      + `${row("trunc.exNormPlain", ex.norm_plain, 1, "", true)}`
+      + `${row("trunc.exNormCut", ex.norm_cut, 2, "", false)}</tbody>`;
+    box.append(imgs, table);
+    host.appendChild(box);
+  });
+}
+
+function renderTruncStrips(kept, total) {
+  const strip = (hostId, groups) => {
+    const host = document.getElementById(hostId);
+    clear(host);
+    if (!groups.some((g) => g.length)) {
+      const p = document.createElement("p");
+      p.className = "note";
+      p.textContent = t("trunc.noneDropped", lang);
+      host.appendChild(p);
+      return;
+    }
+    groups.forEach((g, gi) => {
+      if (gi && g.length) {
+        const gap = document.createElement("span");
+        gap.className = "gap";
+        gap.textContent = "…";
+        host.appendChild(gap);
+      }
+      g.forEach((i) => {
+        const fig = document.createElement("figure");
+        const c = document.createElement("canvas");
+        paintDirection(c, i);
+        const cap = document.createElement("figcaption");
+        const sig = trunc.data.sigma[i];
+        cap.textContent = `σ ${fmtSigma(sig)}`;
+        fig.append(c, cap);
+        host.appendChild(fig);
+      });
+    });
+  };
+  const range = (a, b) => Array.from({ length: Math.max(0, b - a) }, (_, k) => a + k);
+  const head = range(0, Math.min(3, kept));
+  const tailKept = range(Math.max(head.length, kept - 3), kept);
+  strip("trunc-kept", [head, tailKept]);
+  const firstDrop = range(kept, Math.min(total, kept + 3));
+  const lastDrop = range(Math.max(kept + firstDrop.length, total - 3), total);
+  strip("trunc-dropped", [firstDrop, lastDrop]);
+}
+
+function renderTruncation() {
+  const d = trunc.data;
+  if (!d) return;
+  const L = d.levels[trunc.level];
+  const r = d.grid[trunc.level];
+  const total = d.sigma.length;
+  const chosen = d.grid.indexOf(d.chosen);
+
+  document.getElementById("trunc-readout").innerHTML =
+    `${t("trunc.sliderLabel", lang)}: <strong>${levelLabel(r)}</strong>${r ? ` ${t("trunc.cutOf", lang)}` : ""} · `
+    + fill(t("trunc.readout", lang), { kept: L.kept, total, energy: fmtPct(L.energy) });
+
+  drawSpectrum(document.getElementById("trunc-spectrum"), {
+    sigma: d.sigma, kept: L.kept, cutValue: r * d.sigma[0],
+    labels: {
+      x: t("trunc.axisIndex", lang), y: t("trunc.axisSigma", lang),
+      cut: `${t("trunc.cutLine", lang)} ${levelLabel(r)}`,
+      fmt: (v) => (v >= 1 ? fmtNum(v, 0) : (lang === "pt" ? String(v).replace(".", ",") : String(v))),
+      tip: (i, sig, k) => `${fill(t("trunc.tipDir", lang), { i, s: fmtSigma(sig) })} · `
+        + t(k ? "trunc.tipKept" : "trunc.tipDropped", lang),
+      aria: t("trunc.spectrumTitle", lang),
+    },
+  });
+  renderTruncStrips(L.kept, total);
+
+  drawLevelCurve(document.getElementById("trunc-auc"), {
+    values: d.val_auc_mean.map((a) => 1 - a), ticks: d.grid.map(levelLabel), current: trunc.level, chosen,
+    labels: {
+      x: t("trunc.axisLevel", lang), y: t("trunc.axisMisordered", lang),
+      fmtY: (v) => `${lang === "pt" ? String(+(v * 100).toPrecision(2)).replace(".", ",") : +(v * 100).toPrecision(2)}%`,
+      chosen: t("trunc.chosen", lang),
+      tip: (lev, v) => fill(t("trunc.tipLevel", lang), { level: lev, auc: fmtNum(1 - v, 4), err: fmtPct(v) }),
+      aria: t("trunc.aucTitle", lang),
+    },
+  });
+
+  const hist = createHistogram(document.getElementById("trunc-hist"), {
+    threshold: TAU_DEFAULT,
+    labels: {
+      theta: t("play.axisTheta", lang), count: t("play.axisCount", lang),
+      threshold: t("play.tauShort", lang), fmt: fmtDeg,
+    },
+  });
+  hist.draw({
+    hist_edges: d.hist_edges, hist_A: L.hist_A, hist_B: L.hist_B,
+    name_A: className("Digit 4", lang), name_B: className("Digit 9", lang),
+  }, null);
+  document.getElementById("trunc-hist-stats").innerHTML = fill(t("trunc.histStats", lang), {
+    auc: fmtNum(L.test_auc, 3), acc: fmtPct(L.test_acc45),
+  });
+
+  const def = d.levels[chosen];
+  document.getElementById("trunc-dr1").textContent = fill(t("trunc.dr1", lang), {
+    kept: def.kept, total, share: pct0(def.kept / total), energy: fmtPct(def.energy),
+  });
+  renderTruncExamples();
+}
+
+async function initTruncation() {
+  try {
+    const r = await fetch("data/truncation.json");
+    if (!r.ok) throw new Error(`truncation.json: ${r.status}`);
+    trunc.data = await r.json();
+    trunc.sprite = await loadImage("data/truncation_dirs.png");
+  } catch (err) {
+    console.error(err);
+    document.getElementById("truncation").hidden = true;
+    return;
+  }
+  const slider = document.getElementById("trunc-slider");
+  slider.max = String(trunc.data.grid.length - 1);
+  trunc.level = trunc.data.grid.indexOf(trunc.data.chosen);
+  slider.value = String(trunc.level);
+  slider.addEventListener("input", () => { trunc.level = Number(slider.value); renderTruncation(); });
+  renderTruncation();
+}
+
 /* ============================== citation ============================= */
 
 function initCite() {
@@ -592,6 +825,7 @@ function redrawAll() {
   initHero();
   initCospan();
   renderResults();
+  renderTruncation();
   relabelPairSelect("#pair-select");
   relabelPairSelect("#h-pair-select");
   renderMachine();
@@ -614,6 +848,7 @@ initHero();
 initCospan();
 initPad();
 renderResults();
+initTruncation();
 initCite();
 initMachine();
 initPlayground();

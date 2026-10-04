@@ -704,3 +704,133 @@ export function drawScatter(host, points, labels) {
     hit.addEventListener("pointerleave", () => tip.hide());
   });
 }
+
+/* ======================================================================
+   Singular values of H, log scale, with the truncation cut
+   ====================================================================== */
+
+/**
+ * @param {number[]} sigma   singular values, strongest first
+ * @param {number}   kept    how many survive the cut (sigma[kept-1] is the last kept)
+ * @param {object}   labels  { x, y, cut, fmt(v) }
+ */
+export function drawSpectrum(host, { sigma, kept, cutValue, labels }) {
+  clear(host);
+  const W = 960, H = 300;
+  const m = { top: 16, right: 14, bottom: 44, left: 56 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": labels.aria }, host);
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  const tip = tooltip();
+  const n = sigma.length;
+  const lo = Math.floor(Math.log10(Math.min(...sigma))), hi = Math.ceil(Math.log10(sigma[0]));
+  const X = (i) => m.left + (i / (n - 1)) * iw;
+  const Y = (v) => m.top + ih - ((Math.log10(v) - lo) / (hi - lo)) * ih;
+
+  for (let e = lo; e <= hi; e++) {
+    el("line", { x1: m.left, y1: Y(10 ** e), x2: m.left + iw, y2: Y(10 ** e), stroke: css("--grid"), "stroke-width": 1 }, svg);
+    el("text", {
+      x: m.left - 8, y: Y(10 ** e) + 4, "text-anchor": "end", "font-size": 11,
+      fill: css("--text-muted"), "font-variant-numeric": "tabular-nums",
+    }, svg).textContent = labels.fmt(10 ** e);
+  }
+  el("line", { x1: m.left, y1: m.top + ih, x2: m.left + iw, y2: m.top + ih, stroke: css("--border-strong") }, svg);
+  [1, 100, 200, 300, 400, 500].filter((i) => i <= n).forEach((i) => {
+    el("text", {
+      x: X(i - 1), y: m.top + ih + 18, "text-anchor": "middle", "font-size": 11,
+      fill: css("--text-muted"), "font-variant-numeric": "tabular-nums",
+    }, svg).textContent = i;
+  });
+  el("text", { x: m.left + iw / 2, y: H - 6, "text-anchor": "middle", "font-size": 11, fill: css("--text-muted") }, svg)
+    .textContent = labels.x;
+  el("text", {
+    x: 12, y: m.top + ih / 2, "font-size": 11, fill: css("--text-muted"),
+    transform: `rotate(-90 12 ${m.top + ih / 2})`, "text-anchor": "middle",
+  }, svg).textContent = labels.y;
+
+  // kept part in the accent, dropped part muted; one path each
+  const path = (a, b) => sigma.slice(a, b).map((v, j) => `${j ? "L" : "M"}${X(a + j)},${Y(v)}`).join("");
+  const base = m.top + ih;
+  if (kept > 0) {
+    el("path", { d: `${path(0, kept)}L${X(kept - 1)},${base}L${X(0)},${base}Z`, fill: css("--series-a-soft") }, svg);
+    el("path", { d: path(0, kept), fill: "none", stroke: css("--series-a"), "stroke-width": 2 }, svg);
+  }
+  if (kept < n) {
+    el("path", { d: path(Math.max(0, kept - 1), n), fill: "none", stroke: css("--neutral-mid"), "stroke-width": 2 }, svg);
+  }
+
+  // the cut: horizontal at the cutoff value, vertical at the last kept direction
+  if (kept < n) {
+    const xc = X(kept - 0.5), yc = Y(cutValue);
+    el("line", { x1: m.left, y1: yc, x2: m.left + iw, y2: yc, stroke: css("--text-muted"), "stroke-width": 1.2, "stroke-dasharray": "5 4" }, svg);
+    el("line", { x1: xc, y1: m.top, x2: xc, y2: base, stroke: css("--text-primary"), "stroke-width": 2 }, svg);
+    el("text", {
+      x: xc + 6, y: m.top + 12, "font-size": 11, "font-weight": 600, fill: css("--text-primary"),
+      stroke: css("--surface-1"), "stroke-width": 4, "paint-order": "stroke", "stroke-linejoin": "round",
+    }, svg).textContent = labels.cut;
+  }
+
+  // hover: nearest direction
+  const hit = el("rect", { x: m.left, y: m.top, width: iw, height: ih, fill: "transparent" }, svg);
+  hit.addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect();
+    const i = Math.max(0, Math.min(n - 1, Math.round(((ev.clientX - r.left) / r.width * W - m.left) / iw * (n - 1))));
+    tip.show(labels.tip(i + 1, sigma[i], i < kept), ev.clientX, ev.clientY);
+  });
+  hit.addEventListener("pointerleave", () => tip.hide());
+}
+
+/* ======================================================================
+   A metric across the truncation levels (categorical x axis)
+   ====================================================================== */
+
+/* values on a log scale (e.g. an error rate), so both ends of a U are visible */
+export function drawLevelCurve(host, { values, ticks, current, chosen, labels }) {
+  clear(host);
+  const W = 520, H = 270;
+  const m = { top: 18, right: 16, bottom: 46, left: 56 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": labels.aria }, host);
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  const tip = tooltip();
+  const n = values.length;
+  const lo = Math.floor(Math.log10(Math.min(...values))), hi = Math.ceil(Math.log10(Math.max(...values)));
+  const X = (i) => m.left + (i / (n - 1)) * iw;
+  const Y = (v) => m.top + ih - ((Math.log10(v) - lo) / (hi - lo)) * ih;
+
+  for (let e = lo; e <= hi; e++) {
+    const v = 10 ** e;
+    el("line", { x1: m.left, y1: Y(v), x2: m.left + iw, y2: Y(v), stroke: css("--grid") }, svg);
+    el("text", {
+      x: m.left - 8, y: Y(v) + 4, "text-anchor": "end", "font-size": 11,
+      fill: css("--text-muted"), "font-variant-numeric": "tabular-nums",
+    }, svg).textContent = labels.fmtY(v);
+  }
+  el("text", {
+    x: 12, y: m.top + ih / 2, "font-size": 11, fill: css("--text-muted"),
+    transform: `rotate(-90 12 ${m.top + ih / 2})`, "text-anchor": "middle",
+  }, svg).textContent = labels.y;
+  ticks.forEach((t, i) => {
+    if (i % 2 && i !== chosen) return;   // every other tick, always the chosen one
+    el("text", {
+      x: X(i), y: m.top + ih + 18, "text-anchor": "middle", "font-size": 10.5,
+      fill: css("--text-muted"), "font-variant-numeric": "tabular-nums",
+    }, svg).textContent = t;
+  });
+  el("text", { x: m.left + iw / 2, y: H - 6, "text-anchor": "middle", "font-size": 11, fill: css("--text-muted") }, svg)
+    .textContent = labels.x;
+
+  el("path", {
+    d: values.map((v, i) => `${i ? "L" : "M"}${X(i)},${Y(v)}`).join(""),
+    fill: "none", stroke: css("--series-a"), "stroke-width": 2,
+  }, svg);
+  values.forEach((v, i) => {
+    el("circle", { cx: X(i), cy: Y(v), r: i === current ? 6.5 : 3.5, fill: i === current ? css("--text-primary") : css("--series-a"), stroke: css("--surface-1"), "stroke-width": 2 }, svg);
+    const hit = el("circle", { cx: X(i), cy: Y(v), r: 12, fill: "transparent" }, svg);
+    hit.addEventListener("pointermove", (ev) => tip.show(labels.tip(ticks[i], v), ev.clientX, ev.clientY));
+    hit.addEventListener("pointerleave", () => tip.hide());
+  });
+  el("circle", { cx: X(chosen), cy: Y(values[chosen]), r: 10, fill: "none", stroke: css("--text-secondary"), "stroke-width": 1.5, "stroke-dasharray": "3 2" }, svg);
+  el("text", {
+    x: X(chosen), y: Y(values[chosen]) + 26, "text-anchor": "middle", "font-size": 11, "font-weight": 600,
+    fill: css("--text-secondary"),
+  }, svg).textContent = labels.chosen;
+}
