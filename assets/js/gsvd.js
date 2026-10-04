@@ -14,6 +14,8 @@
    A and B. Each pair's json reports the float16 transport error. */
 
 const DATA = "data/";
+/* Bumped with every data regeneration so browsers do not mix old and new files. */
+const V = "?v=20261004";
 
 /* --- IEEE 754 half precision -> Float32, via a 65536-entry lookup ------- */
 
@@ -58,7 +60,7 @@ function decodeHalf(buffer, byteOffset, count) {
 const cache = new Map();
 
 export async function loadIndex() {
-  const r = await fetch(DATA + "index.json");
+  const r = await fetch(DATA + "index.json" + V);
   if (!r.ok) throw new Error("index.json: " + r.status);
   return r.json();
 }
@@ -68,7 +70,7 @@ export async function loadMeta(slug) {
   const key = "meta:" + slug;
   if (!cache.has(key)) {
     cache.set(key, (async () => {
-      const r = await fetch(`${DATA}${slug}.json`);
+      const r = await fetch(`${DATA}${slug}.json${V}`);
       if (!r.ok) throw new Error(`${slug}.json: ${r.status}`);
       return r.json();
     })());
@@ -83,7 +85,7 @@ export async function loadOperator(slug, meta) {
     cache.set(key, (async () => {
       // Base64 inside JSON rather than a raw .bin: corporate proxies often
       // block application/octet-stream downloads but let JSON through.
-      const r = await fetch(`${DATA}${slug}.op.json`);
+      const r = await fetch(`${DATA}${slug}.op.json${V}`);
       if (!r.ok) throw new Error(`${slug}.op.json: ${r.status}`);
       const bytes = Uint8Array.from(atob((await r.json()).data), (ch) => ch.charCodeAt(0));
       const buf = bytes.buffer;
@@ -111,7 +113,7 @@ export function loadImage(src) {
   });
 }
 
-export const spriteURL = (slug, which) => `${DATA}${slug}_${which}.png`;
+export const spriteURL = (slug, which) => `${DATA}${slug}_${which}.png${V}`;
 
 /* --- the angle ---------------------------------------------------------- */
 

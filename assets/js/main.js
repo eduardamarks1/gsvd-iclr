@@ -1,11 +1,11 @@
-import { applyLang, className, detectLang, t } from "./i18n.js";
+import { applyLang, className, detectLang, t } from "./i18n.js?v=20261004";
 import {
   loadIndex, loadMeta, loadOperator, loadImage, spriteURL, theta,
-} from "./gsvd.js";
+} from "./gsvd.js?v=20261004";
 import {
   angleColor, clear, createCospan, createDial, createHistogram,
   drawBlocks, drawLevelCurve, drawScatter, drawSpectrum,
-} from "./viz.js";
+} from "./viz.js?v=20261004";
 
 /* MNIST pairs shown in the results table. Their numbers are read from the
    generated data/<slug>.json (tools/precompute.py, pooled centering), so the
@@ -787,10 +787,10 @@ function renderTruncation() {
 
 async function initTruncation() {
   try {
-    const r = await fetch("data/truncation.json");
+    const r = await fetch("data/truncation.json?v=20261004");
     if (!r.ok) throw new Error(`truncation.json: ${r.status}`);
     trunc.data = await r.json();
-    trunc.sprite = await loadImage("data/truncation_dirs.png");
+    trunc.sprite = await loadImage("data/truncation_dirs.png?v=20261004");
   } catch (err) {
     console.error(err);
     document.getElementById("truncation").hidden = true;
